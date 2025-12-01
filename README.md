@@ -6,7 +6,7 @@ Aplicación web Full Stack diseñada para digitalizar y optimizar el flujo opera
 ## Características Principales
 
 * **Punto de Venta Híbrido (Smart POS):** Interfaz de facturación optimizada que unifica la entrada de datos. Permite la carga ágil mediante **lector de códigos de barras** (hardware) para productos envasados o **búsqueda predictiva** para productos a granel, visualizando stock y precio en tiempo real.
-* **Gestión de Inventario y Proveedores:** Módulo integral para el control de stock y la **generación de pedidos a proveedores**, facilitando la reposición de mercadería y el control de costos.
+* **Gestión de Inventario y Proveedores:** Módulo integral para el control de stock y la generación de pedidos a proveedores, facilitando la reposición de mercadería y el control de costos.
 * **Cuentas Corrientes:** Sistema de registro de deudas y pagos pendientes ("fiado") asociados a clientes específicos, con seguimiento de saldos.
 * **Lógica Financiera y Turnos:**
     * Cálculo automático de recargos por intereses según el método de pago (Tarjetas de Crédito).
