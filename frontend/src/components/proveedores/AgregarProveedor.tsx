@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Card, Form, Button, Alert, Row, Col, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle } from "react-bootstrap-icons";
-import logo from "../../assets/dietSanJose.png";
+import { ArrowLeft, CheckCircle } from "lucide-react";
 import { createProveedor, type CreateProveedorDto} from "../../services/apiService"; // Importar
 
 // La interfaz ahora coincide con el DTO
@@ -125,13 +124,6 @@ const AgregarProveedor: React.FC = () => {
   return (
     <div>
       {/* Logo en la esquina superior derecha */}
-      <div className="d-flex justify-content-end mb-3">
-        <img
-          src={logo}
-          alt="Dietética San José"
-          style={{ height: "80px", objectFit: "contain" }}
-        />
-      </div>
 
       <div className="mt-4">
         <Card className="shadow-sm">

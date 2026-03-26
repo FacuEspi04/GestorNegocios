@@ -13,7 +13,7 @@ import RegistrarVenta from './components/ventas/RegistrarVenta';
 import CuentasCorrientes from './components/ventas/CuentasCorrientes';
 import CrearPedido from './components/proveedores/CrearPedido';
 import ListaPedidos from './components/proveedores/ListaPedidos';
-import logo from './assets/dietSanJose.png';
+
 import RegistrarRetiro from './components/caja/RegistrarRetiro';
 import EditarProveedor from './components/proveedores/EditarProveedor';
 
@@ -26,7 +26,6 @@ function App() {
           element={
             <Layout 
               brand="Dietética San José"
-              logo={logo}
             />
           }
         >

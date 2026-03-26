@@ -1,87 +1,78 @@
-import React from "react";
-import { Card, Row, Col } from "react-bootstrap";
-import { useNavigate } from "react-router-dom"; // <-- 1. IMPORTAR useNavigate
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Package, ClipboardList, ShoppingCart } from "lucide-react";
 import logo from "../assets/dietSanJose.png";
-
-// --- 2. AÑADIR UN POCO DE ESTILO PARA EL HOVER ---
-// (Esto es opcional, pero mejora la experiencia de usuario)
-const style = `
-  .card-hover:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-`;
-
 const Inicio: React.FC = () => {
-  const navigate = useNavigate(); // <-- 3. INICIALIZAR EL HOOK
+  const navigate = useNavigate();
+
+  // Ocultar scrollbar en Inicio (no hay contenido que scrollear)
+  // y restaurar al salir para que otras páginas puedan scrollear
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, []);
+
+  const cards = [
+    {
+      title: "Artículos",
+      desc: "Gestiona tu inventario de productos dietéticos y naturales.",
+      icon: <Package size={28} className="text-white" />,
+      bg: "bg-blue-500/10",
+      iconBg: "bg-blue-500",
+      path: "/articulos",
+    },
+    {
+      title: "Pedidos",
+      desc: "Administra y haz seguimiento de tus pedidos a proveedores.",
+      icon: <ClipboardList size={28} className="text-white" />,
+      bg: "bg-emerald-500/10",
+      iconBg: "bg-emerald-500",
+      path: "/proveedores/pedidos/lista",
+    },
+    {
+      title: "Ventas",
+      desc: "Registra y consulta todas las ventas realizadas.",
+      icon: <ShoppingCart size={28} className="text-white" />,
+      bg: "bg-amber-500/10",
+      iconBg: "bg-amber-500",
+      path: "/ventas",
+    },
+  ];
 
   return (
-    <div className="mt-4">
-      {/* Añadimos el tag <style> para los efectos hover */}
-      <style>{style}</style>
-      
-      <h2 className="mb-4 text-center">Bienvenido a Dietética San José</h2>
-      {/* Logo centrado */}
-      <div className="d-flex justify-content-center mb-4">
-        <img 
-          src={logo} 
-          alt="Dietética San José" 
-          style={{ height: '150px', objectFit: 'contain' }}
+    <div style={{ height: "calc(100vh - 80px)", overflow: "hidden" }} className="d-flex flex-column align-items-center pt-4 px-3">
+      <div className="flex flex-col items-center mb-4">
+        <img
+          src={logo}
+          alt="Dietética San José"
+          className="object-contain mb-2"
+          style={{ height: "80px" }}
         />
+        <h2 className="text-2xl font-bold text-slate-900 mb-1">
+          Bienvenido a Dietética San José
+        </h2>
+        <p className="text-slate-500 text-sm mt-0">
+          Selecciona una sección para comenzar
+        </p>
       </div>
-      <Row className="g-4">
-        <Col md={4}>
-          {/* --- 4. AÑADIR onClick, style y className --- */}
-          <Card 
-            className="shadow-sm h-100 card-hover" 
-            onClick={() => navigate('/articulos')}
-            style={{ cursor: 'pointer' }}
-          >
-            <Card.Body className="text-center">
-              <div style={{ fontSize: "3rem", color: "#8f3d38" }}>📦</div>
-              <Card.Title>Artículos</Card.Title>
-              <Card.Text>
-                Gestiona tu inventario de productos dietéticos y naturales.
-              </Card.Text>
-            </Card.Body>
-          </Card>
-        </Col>
 
-        <Col md={4}>
-          {/* --- 4. AÑADIR onClick, style y className --- */}
-          <Card 
-            className="shadow-sm h-100 card-hover"
-            onClick={() => navigate('/proveedores')}
-            style={{ cursor: 'pointer' }}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto w-100">
+        {cards.map((card) => (
+          <div
+            key={card.title}
+            className="nav-card"
+            onClick={() => navigate(card.path)}
           >
-            <Card.Body className="text-center">
-              <div style={{ fontSize: "3rem", color: "#8f3d38" }}>🤝</div>
-              <Card.Title>Proveedores</Card.Title>
-              <Card.Text>
-                Administra tus proveedores y mantén contacto actualizado.
-              </Card.Text>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col md={4}>
-          {/* --- 4. AÑADIR onClick, style y className --- */}
-          <Card 
-            className="shadow-sm h-100 card-hover"
-            onClick={() => navigate('/ventas')}
-            style={{ cursor: 'pointer' }}
-          >
-            <Card.Body className="text-center">
-              <div style={{ fontSize: "3rem", color: "#8f3d38" }}>💰</div>
-              <Card.Title>Ventas</Card.Title>
-              <Card.Text>
-                Registra y consulta todas las ventas realizadas.
-              </Card.Text>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+            <div className={`icon-wrapper ${card.iconBg}`} style={{ borderRadius: 12 }}>
+              {card.icon}
+            </div>
+            <h5 className="text-lg font-semibold text-slate-900 mb-1">{card.title}</h5>
+            <p className="text-sm text-slate-500 mb-0">{card.desc}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

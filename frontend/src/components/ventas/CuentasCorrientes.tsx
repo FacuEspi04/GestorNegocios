@@ -11,8 +11,7 @@ import {
   Tabs,
   Tab,
 } from "react-bootstrap";
-import { ArrowLeft, CashCoin, CheckCircle, Wallet2, CalendarDate, People, PlusCircle, PencilSquare, Trash } from "react-bootstrap-icons";
-import logo from "../../assets/dietSanJose.png";
+import { ArrowLeft, Wallet, CheckCircle, Wallet2, CalendarDays, Users, PlusCircle, Pencil, Trash2 } from "lucide-react";
 import {
   getVentasPendientes,
   type Venta,
@@ -242,14 +241,11 @@ const CuentasCorrientes: React.FC = () => {
 
   return (
     <div>
-      <div className="d-flex justify-content-end mb-3">
-        <img src={logo} alt="Dietética San José" style={{ height: "80px", objectFit: "contain" }} />
-      </div>
 
       <Card className="mt-4 shadow-sm">
         <Card.Header className="d-flex justify-content-between align-items-center">
           <h5 className="mb-0">
-            <CashCoin className="me-2" />
+            <Wallet size={18} className="me-2" />
             Cuentas Corrientes
           </h5>
           <Button
@@ -284,7 +280,7 @@ const CuentasCorrientes: React.FC = () => {
               onSelect={(k) => setTabKey(k || "deudas")}
               className="mb-4 custom-tabs"
             >
-              <Tab eventKey="deudas" title={<><CashCoin className="me-2"/> Deudas Pendientes</>}>
+              <Tab eventKey="deudas" title={<><Wallet size={16} className="me-2"/> Deudas Pendientes</>}>
                 <div className="mt-3">
                   {Object.keys(ventasPorCliente).length > 0 ? (
                     <>
@@ -312,7 +308,7 @@ const CuentasCorrientes: React.FC = () => {
                   
                   <Card.Body className="p-0">
                     <Table striped bordered hover responsive size="sm" className="mb-0">
-                      <thead style={{ backgroundColor: "#8f3d38", color: "white" }}>
+                      <thead className="table-header-brand">
                         <tr>
                           <th>Fecha</th>
                           <th>Detalle</th>
@@ -364,7 +360,7 @@ const CuentasCorrientes: React.FC = () => {
                 </div>
               </Tab>
 
-              <Tab eventKey="directorio" title={<><People className="me-2"/> Directorio de Clientes</>}>
+              <Tab eventKey="directorio" title={<><Users size={16} className="me-2"/> Directorio de Clientes</>}>
                 <div className="mt-3">
                   <div className="d-flex justify-content-between align-items-center mb-3">
                     <h5 className="mb-0 text-secondary">Clientes Registrados</h5>
@@ -374,7 +370,7 @@ const CuentasCorrientes: React.FC = () => {
                   </div>
 
                   <Table striped bordered hover responsive>
-                    <thead style={{ backgroundColor: "#8f3d38", color: "white" }}>
+                    <thead className="table-header-brand">
                       <tr>
                         <th>N° Interno</th>
                         <th>Nombre</th>
@@ -393,10 +389,10 @@ const CuentasCorrientes: React.FC = () => {
                             <td>{c.email || <small className="text-muted">N/A</small>}</td>
                             <td className="text-center">
                               <Button variant="outline-primary" size="sm" className="me-2" onClick={() => handleShowClienteModal(c)}>
-                                <PencilSquare />
+                                <Pencil size={14} />
                               </Button>
                               <Button variant="outline-danger" size="sm" onClick={() => handleEliminarCliente(c.id)}>
-                                <Trash />
+                                <Trash2 size={14} />
                               </Button>
                             </td>
                           </tr>
@@ -418,7 +414,7 @@ const CuentasCorrientes: React.FC = () => {
       </Card>
 
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-        <Modal.Header closeButton style={{ backgroundColor: "#8f3d38", color: "white" }}>
+        <Modal.Header closeButton className="modal-header-brand">
           <Modal.Title>Registrar Pago: {clienteSeleccionado}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -432,7 +428,7 @@ const CuentasCorrientes: React.FC = () => {
           <Form>
             {/* NUEVO CAMPO: FECHA DEL PAGO */}
             <Form.Group className="mb-3">
-              <Form.Label><CalendarDate className="me-1"/> Fecha de ingreso en Caja</Form.Label>
+              <Form.Label><CalendarDays size={14} className="me-1"/> Fecha de ingreso en Caja</Form.Label>
               <Form.Control 
                 type="date" 
                 value={fechaPago} 
@@ -511,7 +507,7 @@ const CuentasCorrientes: React.FC = () => {
 
       {/* Modal Directorio de Clientes (Crear/Editar) */}
       <Modal show={showClienteModal} onHide={() => setShowClienteModal(false)} centered>
-        <Modal.Header closeButton style={{ backgroundColor: "#8f3d38", color: "white" }}>
+        <Modal.Header closeButton className="modal-header-brand">
           <Modal.Title>{clienteAEditar ? "Editar Cliente" : "Nuevo Cliente"}</Modal.Title>
         </Modal.Header>
         <Modal.Body>

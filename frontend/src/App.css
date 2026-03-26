@@ -1,131 +1,172 @@
-/* poppins-regular - latin */
-@font-face {
-  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-  font-family: 'Poppins';
-  font-style: normal;
-  font-weight: 400;
-  src: url('/fonts/poppins-v24-latin-regular.woff2') format('woff2'); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
-}
-/* Estilos globales */
-body {
-  font-family: 'Poppins', sans-serif;
-  margin: 0;
-  padding: 0;
-}
+/* =============================================
+   LAYOUT: Sidebar + Navbar + Content
+   ============================================= */
 
-* {
-  font-family: 'Poppins', sans-serif;
-}
-
-
-
-/* Variables de colores */ 
-:root {
-  --main-color: #8f3d38;
-  --hover-color: #cb7169;
-  --dark-hover: #56070c;
-}
-
-/* Contenedor principal */
+/* Container */
 .layout-container {
-  min-height: 100vh;
-  background-color: var(--main-color);
+  background-color: var(--color-slate-50);
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
 }
 
-/* Sidebar */
-.sidebar {
-  width: 200px;
-  background-color: var(--main-color);
-  transition: transform 0.3s ease;
-  z-index: 1050;
-  padding-top: 100px;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  padding-bottom: 1rem;
-  position: fixed;
-  height: 100%;
-  color: white;
-}
+/* Sidebar - Removed */
 
-.sidebar-closed {
-  transform: translateX(-100%);
-}
-
-.sidebar-open {
-  transform: translateX(0);
-}
-
-/* Enlaces del sidebar */
+/* Sidebar nav links */
 .custom-navlink {
-  color: white !important;
-  /* text-align: center; <-- CAMBIAMOS ESTO */
-  text-align: center; /* <-- POR ESTO, para que se alinee con w-100 */
-  transition: all 0.2s ease;
+  color: var(--color-slate-300) !important;
+  text-align: left;
+  transition: all 0.15s ease;
   text-decoration: none;
-  padding: 0.5rem 1rem;
-  display: block;
-  border-radius: 4px;
+  padding: 0.6rem 0.875rem;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.625rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
-/* Aplicamos los estilos de hover y activo */
-.custom-navlink:hover
- { /* <-- .active se agregará en el siguiente paso */
-  color: var(--dark-hover) !important;
-  background-color: rgba(255, 255, 255, 0.1) !important; /* <-- AÑADE !important AQUÍ */
+/* Global Button Icon Alignment */
+.btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.375rem;
 }
 
-/* Header/Navbar */
+.custom-navlink:hover {
+  color: white !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.custom-navlink.active,
+.custom-navlink.bg-secondary {
+  color: white !important;
+  background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Navbar */
 .main-navbar {
   z-index: 1100;
-  background-color: var(--main-color) !important;
+  background-color: var(--color-slate-900) !important;
   position: fixed;
   width: 100%;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  min-height: 64px;
 }
 
-.menu-toggle-btn {
-  border: 2px solid var(--main-color) !important;
-  border-radius: 4px !important;
-  background-color: var(--main-color) !important;
-  color: white !important;
-}
+/* Menu toggle button - Removed */
 
-.menu-toggle-btn:hover,
-.menu-toggle-btn:active {
-  background-color: var(--dark-hover) !important;
-  border-color: var(--dark-hover) !important;
-  color: white !important;
-  box-shadow: none !important;
-}
-
-/* Contenido principal */
+/* Main content */
 .main-content {
-  padding-top: 20px;
-  padding-left: 2rem;
-  padding-right: 2rem;
-  padding-bottom: 2rem;
-  transition: margin-left 0.3s ease;
-  background-color: white;
-  min-height: 100vh;
-  color: black;
+  flex-grow: 1;
+ padding-top: 15px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  background-color: var(--color-slate-50);
+  color: var(--color-slate-800);
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
 }
 
-.main-content-shifted {
-  margin-left: 200px;
+/* Main content modifiers - Removed */
+
+/* =============================================
+   REUSABLE COMPONENTS
+   ============================================= */
+
+/* Page header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
 }
 
-.main-content-normal {
-  margin-left: 0;
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-slate-900);
+  margin: 0;
 }
 
-/* Estilos para achicar el contenido del modal de pago */
+/* Stat cards (for dashboard) */
+.stat-card {
+  background: white;
+  border-radius: 10px;
+  border: 1px solid var(--color-slate-200);
+  padding: 1.25rem;
+  transition: box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* Dashboard nav cards */
+.nav-card {
+  background: white;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  color: inherit;
+}
+
+.nav-card:hover {
+  border-color: var(--color-brand-500);
+  box-shadow: 0 4px 16px rgba(143, 61, 56, 0.1);
+  transform: translateY(-2px);
+}
+
+.nav-card .icon-wrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+
+/* Turno cards */
+.turno-card {
+  background: white;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+.turno-card-manana {
+  border-left: 4px solid #3b82f6;
+}
+
+.turno-card-tarde {
+  border-left: 4px solid #f59e0b;
+}
+
+/* Totales card */
+.totales-card {
+  background: white;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 10px;
+  padding: 1.5rem;
+  border-top: 4px solid var(--color-brand-500);
+}
+
+/* Modal small content */
 .modal-contenido-pequeno .modal-body,
 .modal-contenido-pequeno .modal-footer,
 .modal-contenido-pequeno .modal-title {
-  /* Reduce el tamaño de fuente base del modal (ajusta 0.9rem si lo quieres más chico) */
-  font-size: 1rem; 
+  font-size: 1rem;
 }
 
-/* Achicamos también los elementos de formulario, botones y alertas */
 .modal-contenido-pequeno .btn,
 .modal-contenido-pequeno .form-control,
 .modal-contenido-pequeno .form-select,
@@ -133,15 +174,36 @@ body {
   font-size: 1rem;
 }
 
+/* Button brand outline */
 .boton-marron {
- background-color: transparent !important;
- border-color: #A67B5B !important;
- color: #A67B5B !important; /* Texto del mismo color marrón */
+  background-color: transparent !important;
+  border-color: var(--color-brand-500) !important;
+  color: var(--color-brand-500) !important;
 }
 
-/* Efecto al pasar el mouse */
 .boton-marron:hover {
- background-color: #A67B5B !important; /* Se rellena al pasar el mouse */
- border-color: #A67B5B !important;
- color: #FFFFFF !important; /* El texto cambia a blanco */
+  background-color: var(--color-brand-500) !important;
+  border-color: var(--color-brand-500) !important;
+  color: white !important;
 }
+
+/* Botones responsive para cabeceras (100% de ancho y stretch en movil, normal en escritorio) */
+.botones-header-responsive {
+  width: 100%;
+}
+
+.botones-header-responsive>button {
+  flex: 1 1 auto;
+}
+
+@media (min-width: 768px) {
+  .botones-header-responsive {
+    width: auto;
+  }
+
+  .botones-header-responsive>button {
+    flex: 0 0 auto;
+  }
+}
+
+/* Sidebar dropdown overrides - Removed */

@@ -10,11 +10,10 @@ import {
   Alert,
   Spinner,
 } from "react-bootstrap";
-import logo from "../../assets/dietSanJose.png";
-// --- 1. IMPORTAR LO QUE FALTA (ACTUALIZADO) ---
-import { Trash, FileEarmarkPdf } from "react-bootstrap-icons"; // Importar íconos
-import jsPDF from "jspdf"; // Importar jsPDF
-import autoTable from "jspdf-autotable"; // Importar autoTable
+import { Trash2, FileDown, PlusCircle, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   type Pedido,
   type Proveedor,
@@ -27,6 +26,7 @@ import {
 type PedidoGuardado = Pedido;
 
 const ListaPedidos: React.FC = () => {
+  const navigate = useNavigate();
   const [pedidos, setPedidos] = useState<PedidoGuardado[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
 
@@ -194,16 +194,25 @@ const ListaPedidos: React.FC = () => {
 
   return (
     <div>
-      <div className="d-flex justify-content-end mb-3">
-        <img
-          src={logo}
-          alt="Dietética San José"
-          style={{ height: "80px", objectFit: "contain" }}
-        />
-      </div>
       <Card className="mt-4 shadow-sm">
-        <Card.Header>
-          <h5 className="mb-0">Lista de Pedidos a Proveedores</h5>
+        <Card.Header className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+          <h5 className="mb-0">Lista de Pedidos</h5>
+          <div className="d-flex flex-wrap gap-2 botones-header-responsive">
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => navigate("/proveedores")}
+            >
+              <Users size={14} className="me-1" /> Proveedores
+            </Button>
+            <Button
+              variant="success"
+              size="sm"
+              onClick={() => navigate("/proveedores/pedidos/nuevo")}
+            >
+              <PlusCircle size={14} className="me-1" /> Nuevo Pedido
+            </Button>
+          </div>
         </Card.Header>
         <Card.Body>
           <Row className="mb-3">
@@ -262,8 +271,8 @@ const ListaPedidos: React.FC = () => {
               <p className="mt-2">Cargando pedidos...</p>
             </div>
           ) : (
-            <Table striped bordered hover responsive>
-              <thead style={{ backgroundColor: "#8f3d38", color: "white" }}>
+            <Table striped bordered hover responsive className="table-header-brand">
+              <thead>
                 <tr>
                   <th>Fecha</th>
                   <th>Proveedor</th>
@@ -307,7 +316,7 @@ const ListaPedidos: React.FC = () => {
                           onClick={() => imprimirPedido(pedido)}
                           title="Descargar PDF"
                         >
-                          <FileEarmarkPdf />
+                          <FileDown size={14} />
                         </Button>
                       </td>
                       <td style={{ width: "70px" }}>
@@ -318,7 +327,7 @@ const ListaPedidos: React.FC = () => {
                           onClick={() => abrirModalEliminar(pedido)}
                           title="Eliminar pedido"
                         >
-                          <Trash />
+                          <Trash2 size={14} />
                         </Button>
                       </td>
                     </tr>
@@ -396,7 +405,7 @@ const ListaPedidos: React.FC = () => {
                   variant="warning"
                   onClick={() => imprimirPedido(pedidoDetalle)}
                 >
-                  <FileEarmarkPdf className="me-1" />
+                  <FileDown size={14} className="me-1" />
                   Descargar PDF
                 </Button>
               )}
@@ -411,7 +420,7 @@ const ListaPedidos: React.FC = () => {
           >
             <Modal.Header
               closeButton
-              style={{ backgroundColor: "#8f3d38", color: "white" }}
+              className="modal-header-brand"
             >
               <Modal.Title>Confirmar Eliminación</Modal.Title>
             </Modal.Header>

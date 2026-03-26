@@ -12,19 +12,18 @@ import {
   Badge,
   InputGroup,
 } from "react-bootstrap";
-import logo from "../../assets/dietSanJose.png";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { 
-  FileEarmarkPdf, 
+  FileDown, 
   ClipboardPlus, 
   Search, 
-  ExclamationTriangle, 
+  AlertTriangle, 
   Plus, 
-  Dash, 
-  Trash, 
+  Minus, 
+  Trash2, 
   ArrowLeft
-} from "react-bootstrap-icons";
+} from "lucide-react";
 import {
   createPedido,
   getArticulos,
@@ -266,8 +265,7 @@ const CrearPedido: React.FC = () => {
                     >
                       <ArrowLeft size={24} />
                     </Button>
-        <h3 className="mb-0"><ClipboardPlus className="me-2"/>Nuevo Pedido</h3>
-        <img src={logo} alt="Logo" style={{ height: "60px" }} />
+        <h3 className="mb-0 flex items-center gap-2"><ClipboardPlus size={22}/>Nuevo Pedido</h3>
       </div>
 
       {error && <Alert variant="danger" dismissible onClose={() => setError("")}>{error}</Alert>}
@@ -280,7 +278,7 @@ const CrearPedido: React.FC = () => {
                 <Card className="shadow-sm h-100">
                     <Card.Header className="bg-light">
                         <InputGroup>
-                            <InputGroup.Text><Search/></InputGroup.Text>
+                            <InputGroup.Text><Search size={16}/></InputGroup.Text>
                             <Form.Control 
                                 type="text" 
                                 placeholder="Buscar artículo por nombre o código..."
@@ -296,7 +294,7 @@ const CrearPedido: React.FC = () => {
                         {stockCritico.length > 0 && (
                             <div className="mb-4">
                                 <h6 className="text-danger d-flex align-items-center mb-2">
-                                    <ExclamationTriangle className="me-2"/> Artículos con Stock Crítico (Bajo Mínimo)
+                                    <AlertTriangle className="me-2" size={16}/> Artículos con Stock Crítico (Bajo Mínimo)
                                 </h6>
                                 <Table hover size="sm" className="border-danger" bordered>
                                     <thead className="bg-danger text-white">
@@ -319,7 +317,7 @@ const CrearPedido: React.FC = () => {
                                                         variant="outline-danger" 
                                                         onClick={() => agregarAlPedido(art)}
                                                     >
-                                                        <Plus className="fw-bold"/> Agregar
+                                                        <Plus size={14}/> Agregar
                                                     </Button>
                                                 </td>
                                             </tr>
@@ -352,7 +350,7 @@ const CrearPedido: React.FC = () => {
                                                 variant="outline-primary" 
                                                 onClick={() => agregarAlPedido(art)}
                                             >
-                                                <Plus/>
+                                                <Plus size={14}/>
                                             </Button>
                                         </td>
                                     </tr>
@@ -418,18 +416,18 @@ const CrearPedido: React.FC = () => {
                                                 </td>
                                                 <td className="align-middle" style={{width: '110px'}}>
                                                     <InputGroup size="sm">
-                                                        <Button variant="outline-secondary" onClick={() => restarDelPedido(item.articulo.id)}><Dash/></Button>
+                                                        <Button variant="outline-secondary" onClick={() => restarDelPedido(item.articulo.id)}><Minus size={14}/></Button>
                                                         <Form.Control 
                                                             className="text-center px-0" 
                                                             value={item.cantidad} 
                                                             onChange={(e) => cambiarCantidadManual(item.articulo.id, parseInt(e.target.value) || 1)}
                                                         />
-                                                        <Button variant="outline-secondary" onClick={() => agregarAlPedido(item.articulo)}><Plus/></Button>
+                                                        <Button variant="outline-secondary" onClick={() => agregarAlPedido(item.articulo)}><Plus size={14}/></Button>
                                                     </InputGroup>
                                                 </td>
                                                 <td className="align-middle text-end">
                                                     <Button size="sm" variant="link" className="text-danger p-0" onClick={() => eliminarDelPedido(item.articulo.id)}>
-                                                        <Trash/>
+                                                        <Trash2 size={14}/>
                                                     </Button>
                                                 </td>
                                             </tr>
@@ -468,7 +466,7 @@ const CrearPedido: React.FC = () => {
                         Volver al Inicio
                     </Button>
                     <Button variant="primary" onClick={() => pedidoConfirmado && imprimirPedido(pedidoConfirmado)}>
-                        <FileEarmarkPdf className="me-2"/> Descargar PDF
+                        <FileDown className="me-2" size={16}/> Descargar PDF
                     </Button>
                 </div>
             </Card.Body>

@@ -1,7 +1,7 @@
 {
   
   "dependencies": {
-    "better-sqlite3": "^9.6.0"
+    "better-sqlite3": "^11.0.0"
   },
   
   "bin": "backend/dist/main.js",
@@ -14,10 +14,10 @@
       "backend/public/**/*"
     ],
     "targets": [
-      "node18-win-x64"
+      "node20-win-x64"
     ]
   },
   "devDependencies": {
-    "pkg": "^5.8.1"
+    "@yao-pkg/pkg": "^5.15.0"
   }
 }

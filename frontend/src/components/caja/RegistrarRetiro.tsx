@@ -10,8 +10,7 @@ import {
   Spinner,
 } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, CashCoin } from 'react-bootstrap-icons';
-import logo from '../../assets/dietSanJose.png';
+import { ArrowLeft, CheckCircle, Wallet } from 'lucide-react';
 import { createRetiro, type CreateRetiroDto } from '../../services/apiService';
 
 // Interfaz para el estado del formulario
@@ -97,13 +96,6 @@ const RegistrarRetiro: React.FC = () => {
   return (
     <div>
       {/* Logo en la esquina superior derecha */}
-      <div className="d-flex justify-content-end mb-3">
-        <img
-          src={logo}
-          alt="Dietética San José"
-          style={{ height: '80px', objectFit: 'contain' }}
-        />
-      </div>
 
       <div className="mt-4">
         <Card className="shadow-sm">
@@ -174,7 +166,7 @@ const RegistrarRetiro: React.FC = () => {
               </Row>
 
               <Alert variant="warning" className="d-flex align-items-center">
-                <CashCoin size={24} className="me-2" />
+                <Wallet size={20} className="me-2" />
                 Este monto se descontará del total recaudado del día en el
                 reporte de ventas.
               </Alert>

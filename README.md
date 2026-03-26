@@ -19,14 +19,9 @@ Aplicación web Full Stack diseñada para digitalizar y optimizar el flujo opera
 * **ORM:** TypeORM para el modelado de datos y relaciones.
 * **Base de Datos:** **SQLite**. Seleccionada por su eficiencia en despliegues locales (On-Premise), bajo consumo de recursos y facilidad para la gestión de copias de seguridad (Backups) sin requerir un servidor dedicado.
 
-## Destacado Técnico: UX en el Proceso de Cobro
+## Destacado Técnico: UI y UX Optimizada
 
-Uno de los mayores desafíos fue optimizar la velocidad de atención en caja. Se desarrolló un componente de entrada personalizado que:
-1.  Detecta el origen de la entrada (Teclado vs. Escáner HID).
-2.  Si es texto, despliega sugerencias instantáneas con validación de stock.
-3.  Si es código de barras, añade el producto directamente.
-4.  Maneja conflictos de tipos de datos complejos (objetos vs. strings) provenientes de la API para asegurar una experiencia de usuario fluida y libre de errores.
+1. **UX en el Proceso de Cobro:** Se optimizó radicalmente la velocidad en caja mediante un campo de entrada híbrido. Detecta automáticamente si el origen es teclado (despliega sugerencias predictivas y validación de stock) o si es un Escáner HID (añade el producto al instante).
+2. **Diseño Moderno tipo SaaS:** Interfaz minimalista construida con Tailwind CSS y React-Bootstrap, totalmente responsiva (Mobile First) con menús dinámicos adaptables que prioriza el flujo de trabajo sin distracciones.
+3. **Manejo de estados:** Se centraliza el manejo de conflictos de tipos de datos complejos provenientes de la API para asegurar una experiencia de usuario fluida y libre de errores.
 
-Si es código de barras, añade el producto directamente.
-
-Maneja conflictos de tipos de datos complejos (objetos vs. strings) provenientes de la API para asegurar una experiencia de usuario fluida y libre de errores.

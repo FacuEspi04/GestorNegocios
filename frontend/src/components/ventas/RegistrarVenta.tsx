@@ -11,10 +11,8 @@ import {
   Spinner,
   ListGroup,
 } from "react-bootstrap";
-import { UpcScan, Trash, CheckCircle, ArrowLeft, Search } from "react-bootstrap-icons";
+import { Barcode, Trash2, CheckCircle, ArrowLeft, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import logo from "../../assets/dietSanJose.png";
-// Importamos los servicios y tipos
 import {
   getArticulos,
   createVenta,
@@ -381,13 +379,6 @@ const RegistrarVenta: React.FC = () => {
 
   return (
     <div>
-      <div className="d-flex justify-content-end mb-3">
-        <img
-          src={logo}
-          alt="Dietética San José"
-          style={{ height: "80px", objectFit: "contain" }}
-        />
-      </div>
 
       <div className="mt-4">
         <Card className="shadow-sm mb-3">
@@ -507,14 +498,14 @@ const RegistrarVenta: React.FC = () => {
             <div ref={searchWrapperRef} style={{ position: "relative" }}>
               <Form onSubmit={handleSubmit}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Buscar Producto (Escáner o Nombre)</Form.Label>
+                  <Form.Label>Buscar Producto (Nombre o Escáner)</Form.Label>
                   <InputGroup>
                     <InputGroup.Text>
-                      {codigoBarras.length > 0 && isNaN(Number(codigoBarras)) ? <Search/> : <UpcScan />}
+                      {codigoBarras.length > 0 && isNaN(Number(codigoBarras)) ? <Search size={16}/> : <Barcode size={16} />}
                     </InputGroup.Text>
                     <Form.Control
                       type="text"
-                      placeholder={isLoading ? "Cargando catálogo..." : "Escanea código o escribe nombre (ej: Granola)..."}
+                      placeholder={isLoading ? "Cargando catálogo..." : "Escribe nombre o escanea código (ej: Granola)..."}
                       value={codigoBarras}
                       onChange={handleInputChange} 
                       autoFocus
@@ -526,7 +517,7 @@ const RegistrarVenta: React.FC = () => {
                     </Button>
                   </InputGroup>
                   <Form.Text className="text-muted">
-                    Si usas lector, presiona el gatillo. Si buscas por nombre, escribe y selecciona de la lista.
+                    Si buscas por nombre, escribe y selecciona de la lista. Si usas lector, presiona el gatillo.
                   </Form.Text>
 
                   {/* LISTA FLOTANTE DE SUGERENCIAS */}
@@ -585,7 +576,7 @@ const RegistrarVenta: React.FC = () => {
             </Card.Header>
             <Card.Body>
               <Table striped bordered hover responsive>
-                <thead style={{ backgroundColor: "#8f3d38", color: "white" }}>
+                <thead className="table-header-brand">
                   <tr>
                     <th>Producto</th>
                     <th>Precio Unit.</th>
@@ -635,7 +626,7 @@ const RegistrarVenta: React.FC = () => {
                           size="sm"
                           onClick={() => eliminarItem(item.articulo.id)}
                         >
-                          <Trash />
+                          <Trash2 size={14} />
                         </Button>
                       </td>
                     </tr>
@@ -652,7 +643,7 @@ const RegistrarVenta: React.FC = () => {
                       <td></td>
                     </tr>
                   )}
-                  <tr style={{ backgroundColor: "#8f3d38", color: "white", fontWeight: "bold" }}>
+                  <tr className="bg-slate-800 text-white font-bold">
                     <td colSpan={3} className="text-end">TOTAL A PAGAR:</td>
                     <td>${calcularTotalFinal().toFixed(2)}</td>
                     <td></td>
@@ -669,7 +660,7 @@ const RegistrarVenta: React.FC = () => {
         )}
 
         <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-          <Modal.Header closeButton style={{ backgroundColor: "#8f3d38", color: "white" }}>
+          <Modal.Header closeButton className="modal-header-brand">
             <Modal.Title>Confirmar Venta</Modal.Title>
           </Modal.Header>
           <Modal.Body>

@@ -10,18 +10,19 @@ import {
   Alert,
   Modal,
   Spinner,
+  Dropdown,
 } from 'react-bootstrap';
 import {
   PlusCircle,
   Calendar,
-  CashStack,
+  Banknote,
   CheckCircle,
-  Trash,
-  BoxArrowRight,
-  FileEarmarkPdf, 
-} from 'react-bootstrap-icons';
+  Trash2,
+  ArrowDownFromLine,
+  FileDown,
+  Menu,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import logo from '../../assets/dietSanJose.png';
 
 import {
   type Venta,
@@ -364,36 +365,63 @@ const VentasList: React.FC = () => {
 
   return (
     <div>
-      <div className="d-flex justify-content-end mb-3">
-        <img src={logo} alt="Dietética San José" style={{ height: "80px", objectFit: "contain" }} />
-      </div>
 
       <div className="mt-4">
         <Card className="shadow-sm mb-3">
           <Card.Header className="d-flex justify-content-between align-items-center">
             <h5 className="mb-0">Resumen de Caja</h5>
-            <div className="d-flex gap-2">
-              <Button size="sm" onClick={handleDownloadPDF} disabled={isLoading || ventas.length === 0} className='boton-marron'>
-                <FileEarmarkPdf className="me-1" /> PDF Día Completo
-              </Button>
-              <Button 
-                variant="outline-primary" 
-                size="sm" 
-                onClick={handleDownloadPDFMañana}
-                disabled={isLoading || (ventasMañana.length === 0 && retirosMañana.length === 0)}
-              >
-                <FileEarmarkPdf className="me-1" /> PDF Mañana
-              </Button>
+            {/* Desktop View: Botones visibles solo en pantallas medianas o grandes */}
+            <div className="d-none d-md-flex gap-2">
+              <Dropdown>
+                <Dropdown.Toggle size="sm" variant="outline-secondary" className="boton-marron d-flex align-items-center">
+                  <FileDown size={14} className="me-1" /> Descargar PDF
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  <Dropdown.Item onClick={handleDownloadPDF} disabled={isLoading || ventas.length === 0}>
+                    Día Completo
+                  </Dropdown.Item>
+                  <Dropdown.Item onClick={handleDownloadPDFMañana} disabled={isLoading || (ventasMañana.length === 0 && retirosMañana.length === 0)}>
+                    Turno mañana
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
               
               <Button variant="outline-danger" size="sm" onClick={() => navigate("/ventas/nuevo-retiro")}>
-                <BoxArrowRight className="me-1" /> Retiros
+                <ArrowDownFromLine size={14} className="me-1" /> Retiros
               </Button>
               <Button variant="warning" size="sm" onClick={() => navigate("/ventas/cuentas-corrientes")}>
-                <CashStack className="me-1" /> Cuentas Ctes
+                <Banknote size={14} className="me-1" /> Cuentas Ctes
               </Button>
               <Button variant="success" size="sm" onClick={() => navigate("/ventas/nueva")}>
                 <PlusCircle className="me-1" /> Nueva Venta
               </Button>
+            </div>
+
+            {/* Mobile View: Menú hamburguesa unificado visible solo en celulares */}
+            <div className="d-flex d-md-none">
+              <Dropdown>
+                <Dropdown.Toggle size="sm" variant="outline-secondary" className="d-flex align-items-center justify-content-center p-2">
+                  <Menu size={18} />
+                </Dropdown.Toggle>
+                <Dropdown.Menu align="end">
+                  <Dropdown.Item className="d-flex align-items-center py-2" onClick={handleDownloadPDF} disabled={isLoading || ventas.length === 0}>
+                    <FileDown size={16} className="me-2" /> Descargar PDF (Día)
+                  </Dropdown.Item>
+                  <Dropdown.Item className="d-flex align-items-center py-2" onClick={handleDownloadPDFMañana} disabled={isLoading || (ventasMañana.length === 0 && retirosMañana.length === 0)}>
+                    <FileDown size={16} className="me-2" /> Descargar PDF (Mañana)
+                  </Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item className="d-flex align-items-center py-2 text-danger" onClick={() => navigate("/ventas/nuevo-retiro")}>
+                    <ArrowDownFromLine size={16} className="me-2" /> Retiros
+                  </Dropdown.Item>
+                  <Dropdown.Item className="d-flex align-items-center py-2" onClick={() => navigate("/ventas/cuentas-corrientes")} style={{ color: "var(--bs-warning-text)" }}>
+                    <Banknote size={16} className="me-2" /> Cuentas Ctes
+                  </Dropdown.Item>
+                  <Dropdown.Item className="d-flex align-items-center py-2 text-success" onClick={() => navigate("/ventas/nueva")}>
+                    <PlusCircle size={16} className="me-2" /> Nueva Venta
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
             </div>
           </Card.Header>
           <Card.Body>
@@ -422,6 +450,53 @@ const VentasList: React.FC = () => {
               <div className="text-center my-5"><Spinner animation="border" variant="success" /></div>
             ) : (ventas.length > 0 || retiros.length > 0) ? (
               <>
+                {ventas.length > 0 ? (
+                <>
+                  <h5 className="mb-3">Ventas del Día</h5>
+                  <Table striped bordered hover responsive>
+                    <thead className="table-header-brand">
+                      <tr>
+                        <th>Hora</th>
+                        <th>Cliente</th>
+                        <th>Turno</th> 
+                        <th>Articulos</th>
+                        <th>Pago</th>
+                        <th>Total Venta</th>
+                        <th>Estado</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ventas.map((venta) => (
+                        <tr key={venta.id}>
+                          <td>{formatearHora(venta.fechaHora)}</td>
+                          <td>{venta.clienteNombre}</td>
+                          <td style={{ textTransform: 'capitalize' }}>
+                            {determinarTurno(venta.fechaHora)}
+                          </td>
+                          <td><small>{venta.items?.length || 0} items</small></td>
+                          <td>
+                             <Badge bg={venta.formaPago ? getFormaPagoBadge(venta.formaPago) : 'secondary'}>
+                               {formatearFormaPago(venta.formaPago, venta.estado)}
+                             </Badge>
+                          </td>
+                          <td>
+                             <div><strong>${Number(venta.total).toFixed(2)}</strong></div>
+                             {Number(venta.monto_pagado) < Number(venta.total) && (
+                               <small className="text-muted">Pagado: ${Number(venta.monto_pagado).toFixed(2)}</small>
+                             )}
+                          </td>
+                          <td><Badge bg={getEstadoBadge(venta)}>{getTextoEstado(venta)}</Badge></td>
+                          <td>
+                            <Button variant="outline-danger" size="sm" onClick={() => abrirModalEliminar(venta)}><Trash2 size={14}/></Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                  </>
+                ) : <Alert variant="info" className="mb-4">No hay ventas hoy.</Alert>}
+
                 {retiros.length > 0 && (
                   <Card className="mb-3 border-danger bg-light">
                     <Card.Body className="py-2">
@@ -429,6 +504,33 @@ const VentasList: React.FC = () => {
                     </Card.Body>
                   </Card>
                 )}
+
+                <Card className="mb-4 totales-card">
+                  <Card.Body>
+                    <h5 className="mb-3">Totales del día</h5>
+                    <Row className="mb-3 text-center g-2">
+                        <Col xs={6} md={3}><div className="p-2 bg-white border rounded">💵 Efectivo:<br/><strong>${totalesPorFormaPago.efectivo.toFixed(2)}</strong></div></Col>
+                        <Col xs={6} md={3}><div className="p-2 bg-white border rounded">💳 Débito:<br/><strong>${totalesPorFormaPago.debito.toFixed(2)}</strong></div></Col>
+                        <Col xs={6} md={3}><div className="p-2 bg-white border rounded">💳 Crédito:<br/><strong>${totalesPorFormaPago.credito.toFixed(2)}</strong></div></Col>
+                        <Col xs={6} md={3}><div className="p-2 bg-white border rounded">🏦 Transf:<br/><strong>${totalesPorFormaPago.transferencia.toFixed(2)}</strong></div></Col>
+                    </Row>
+                    <hr />
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div><h6 className="mb-0">Total Ventas</h6></div>
+                      <h5 className="mb-0 text-success fw-bold">${totalRecaudadoDia.toFixed(2)}</h5>
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center mt-2 text-danger">
+                      <div><h6 className="mb-0">Total Retiros</h6></div>
+                      <h5 className="mb-0 fw-bold">-${totalRetirosDelDia.toFixed(2)}</h5>
+                    </div>
+                    <hr />
+                    <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                      <h5 className="mb-0 fw-bold" style={{color: '#8f3d38'}}>NETO EN CAJA</h5>
+                      <h3 className="mb-0 fw-bold" style={{color: '#8f3d38'}}>${netoTotalDia.toFixed(2)}</h3>
+                    </div>
+                  </Card.Body>
+                </Card>
+
                 <Row className="mb-3">
                     <Col md={6}>
                         <Card style={{ backgroundColor: "#e7f3ff", border: "2px solid #0d6efd" }}>
@@ -477,79 +579,6 @@ const VentasList: React.FC = () => {
                         </Card>
                     </Col>
                 </Row>
-
-                <Card className="mt-3 mb-4" style={{ backgroundColor: "#f8f9fa", border: "2px solid #8f3d38" }}>
-                  <Card.Body>
-                    <h5 className="mb-3">Totales del día</h5>
-                    <Row className="mb-3 text-center">
-                        <Col><div className="p-2 bg-white border rounded">💵 Efectivo: <strong>${totalesPorFormaPago.efectivo.toFixed(2)}</strong></div></Col>
-                        <Col><div className="p-2 bg-white border rounded">💳 Débito: <strong>${totalesPorFormaPago.debito.toFixed(2)}</strong></div></Col>
-                        <Col><div className="p-2 bg-white border rounded">💳 Crédito: <strong>${totalesPorFormaPago.credito.toFixed(2)}</strong></div></Col>
-                        <Col><div className="p-2 bg-white border rounded">🏦 Transf: <strong>${totalesPorFormaPago.transferencia.toFixed(2)}</strong></div></Col>
-                    </Row>
-                    <hr />
-                    <div className="d-flex justify-content-between align-items-center">
-                      <div><h6 className="mb-0">Total Ventas</h6></div>
-                      <h3 className="mb-0 text-success">${totalRecaudadoDia.toFixed(2)}</h3>
-                    </div>
-                    <div className="d-flex justify-content-between align-items-center mt-2 text-danger">
-                      <div><h6 className="mb-0">Total Retiros</h6></div>
-                      <h4 className="mb-0">-${totalRetirosDelDia.toFixed(2)}</h4>
-                    </div>
-                    <hr />
-                    <div className="d-flex justify-content-between align-items-center">
-                      <h5 className="mb-0" style={{color: '#8f3d38'}}>NETO EN CAJA</h5>
-                      <h2 className="mb-0" style={{color: '#8f3d38'}}>${netoTotalDia.toFixed(2)}</h2>
-                    </div>
-                  </Card.Body>
-                </Card>
-
-                {ventas.length > 0 ? (
-                <>
-                  <h5 className="mt-4 mb-3">Ventas del Día</h5>
-                  <Table striped bordered hover responsive>
-                    <thead style={{ backgroundColor: "#8f3d38", color: "white" }}>
-                      <tr>
-                        <th>Hora</th>
-                        <th>Cliente</th>
-                        <th>Turno</th> 
-                        <th>Articulos</th>
-                        <th>Pago</th>
-                        <th>Total Venta</th>
-                        <th>Estado</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ventas.map((venta) => (
-                        <tr key={venta.id}>
-                          <td>{formatearHora(venta.fechaHora)}</td>
-                          <td>{venta.clienteNombre}</td>
-                          <td style={{ textTransform: 'capitalize' }}>
-                            {determinarTurno(venta.fechaHora)}
-                          </td>
-                          <td><small>{venta.items?.length || 0} items</small></td>
-                          <td>
-                             <Badge bg={venta.formaPago ? getFormaPagoBadge(venta.formaPago) : 'secondary'}>
-                               {formatearFormaPago(venta.formaPago, venta.estado)}
-                             </Badge>
-                          </td>
-                          <td>
-                             <div><strong>${Number(venta.total).toFixed(2)}</strong></div>
-                             {Number(venta.monto_pagado) < Number(venta.total) && (
-                               <small className="text-muted">Pagado: ${Number(venta.monto_pagado).toFixed(2)}</small>
-                             )}
-                          </td>
-                          <td><Badge bg={getEstadoBadge(venta)}>{getTextoEstado(venta)}</Badge></td>
-                          <td>
-                            <Button variant="outline-danger" size="sm" onClick={() => abrirModalEliminar(venta)}><Trash/></Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                  </>
-                ) : <Alert variant="info">No hay ventas hoy.</Alert>}
               </>
             ) : (
               <Alert variant="warning" className="text-center">No hay movimientos para esta fecha.</Alert>

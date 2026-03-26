@@ -10,8 +10,7 @@ import {
   Spinner,
 } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle } from 'react-bootstrap-icons';
-import logo from '../../assets/dietSanJose.png';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
 // --- MODIFICADO: Importar tipos y funciones de Proveedor ---
 // --- AÑADIDO: 'getProveedorById' ---
 import {
@@ -158,14 +157,6 @@ const EditarProveedor: React.FC = () => {
 
   return (
     <div>
-      {/* Logo */}
-      <div className="d-flex justify-content-end mb-3">
-        <img
-          src={logo}
-          alt="Dietética San José"
-          style={{ height: '80px', objectFit: 'contain' }}
-        />
-      </div>
 
       <div className="mt-4">
         <Card className="shadow-sm">

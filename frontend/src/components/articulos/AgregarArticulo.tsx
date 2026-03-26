@@ -11,8 +11,7 @@ import {
   Modal, 
 } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, UpcScan } from 'react-bootstrap-icons';
-import logo from '../../assets/dietSanJose.png';
+import { ArrowLeft, CheckCircle, Barcode, RefreshCw } from 'lucide-react';
 import {
   createArticulo,
   getCategorias,
@@ -254,26 +253,17 @@ const AgregarArticulo: React.FC = () => {
 
   return (
     <div>
-      <div className="d-flex justify-content-end mb-3">
-        <img
-          src={logo}
-          alt="Dietética San José"
-          style={{ height: '80px', objectFit: 'contain' }}
-        />
-      </div>
-
-      <div className="mt-4">
         <Card className="shadow-sm">
-          <Card.Header className="d-flex align-items-center">
+          <Card.Header className="d-flex align-items-center gap-2">
             <Button
               variant="link"
               onClick={handleCancelar}
-              className="p-0 me-2"
+              className="p-0 text-slate-600"
               style={{ textDecoration: 'none' }}
             >
-              <ArrowLeft size={24} />
+              <ArrowLeft size={20} />
             </Button>
-            <h5 className="mb-0">Agregar Nuevo Artículo</h5>
+            <h5 className="mb-0 font-semibold">Agregar Nuevo Artículo</h5>
           </Card.Header>
           <Card.Body>
             {error && (
@@ -283,7 +273,7 @@ const AgregarArticulo: React.FC = () => {
             )}
             {exito && (
               <Alert variant="success" className="d-flex align-items-center">
-                <CheckCircle size={24} className="me-2" />
+                <CheckCircle size={20} className="me-2" />
                 ¡Artículo agregado exitosamente! Redirigiendo...
               </Alert>
             )}
@@ -314,7 +304,7 @@ const AgregarArticulo: React.FC = () => {
                     </Form.Label>
                     <InputGroup>
                       <InputGroup.Text>
-                        <UpcScan />
+                        <Barcode size={16} />
                       </InputGroup.Text>
                       <Form.Control
                         type="text"
@@ -329,7 +319,7 @@ const AgregarArticulo: React.FC = () => {
                         onClick={generarCodigoBarras}
                         title="Generar nuevo código aleatorio"
                       >
-                        🔄
+                        <RefreshCw size={14} />
                       </Button>
                     </InputGroup>
                     <Form.Text className="text-muted">
@@ -484,7 +474,6 @@ const AgregarArticulo: React.FC = () => {
             </Form>
           </Card.Body>
         </Card>
-      </div>
 
       <Modal
         show={showMarcaModal}

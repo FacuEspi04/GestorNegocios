@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Table, Card, Button, Alert, Spinner, Modal } from "react-bootstrap";
-// Imports actualizados de iconos
-import { PlusCircle, Trash, PencilSquare } from "react-bootstrap-icons";
+import { Plus, Trash2, Pencil, ClipboardList } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import logo from "../../assets/dietSanJose.png";
 import {
   getProveedores,
   deleteProveedor,
@@ -101,36 +99,29 @@ const ProveedoresList: React.FC = () => {
 
   return (
     <div>
-      {/* Logo */}
-      <div className="d-flex justify-content-end mb-3">
-        <img
-          src={logo}
-          alt="Dietética San José"
-          style={{ height: "80px", objectFit: "contain" }}
-        />
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+        <h1 className="page-title mb-0">Proveedores</h1>
+        <div className="d-flex flex-wrap gap-2 botones-header-responsive">
+          <Button
+            variant="outline-dark"
+            size="sm"
+            onClick={() => navigate("/proveedores/pedidos/nuevo")}
+          >
+            <ClipboardList size={14} className="me-1" />
+            Nuevo Pedido
+          </Button>
+          <Button
+            variant="dark"
+            size="sm"
+            onClick={() => navigate("/proveedores/nuevo")}
+          >
+            <Plus size={14} className="me-1" />
+            Agregar
+          </Button>
+        </div>
       </div>
 
-      <Card className="mt-4 shadow-sm">
-        <Card.Header className="d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">Lista de Proveedores</h5>
-          <div className="d-flex gap-2">
-            <Button
-              variant="outline-primary"
-              size="sm"
-              onClick={() => navigate("/proveedores/pedidos/nuevo")}
-            >
-              🧾 Nuevo Pedido
-            </Button>
-            <Button
-              variant="success"
-              size="sm"
-              onClick={() => navigate("/proveedores/nuevo")}
-            >
-              <PlusCircle className="me-1" /> 
-              Agregar Proveedor
-            </Button>
-          </div>
-        </Card.Header>
+      <Card>
         <Card.Body>
           {error && !isDeleting && (
             <Alert variant="danger" onClose={() => setError(null)} dismissible>
@@ -150,8 +141,8 @@ const ProveedoresList: React.FC = () => {
               <p className="mt-2">Cargando proveedores...</p>
             </div>
           ) : (
-            <Table striped bordered hover responsive>
-              <thead style={{ backgroundColor: "#8f3d38", color: "white" }}>
+            <Table striped bordered hover responsive className="table-header-brand">
+              <thead>
                 <tr>
                   <th>ID</th>
                   <th>Nombre</th>
@@ -174,24 +165,22 @@ const ProveedoresList: React.FC = () => {
                       {/* --- CELDA DE ACCIONES ACTUALIZADA --- */}
                       <td className="text-center">
                         <div className="d-flex justify-content-center gap-2">
-                          {/* Botón Editar (NUEVO) */}
                           <Button
                             variant="outline-primary"
                             size="sm"
                             onClick={() => handleEditar(proveedor.id)}
                             title="Editar proveedor"
                           >
-                            <PencilSquare />
+                            <Pencil size={14} />
                           </Button>
 
-                          {/* Botón Eliminar (Existente) */}
                           <Button
                             variant="outline-danger"
                             size="sm"
                             onClick={() => abrirModalEliminar(proveedor)}
                             title="Eliminar proveedor"
                           >
-                            <Trash />
+                            <Trash2 size={14} />
                           </Button>
                         </div>
                       </td>
@@ -216,7 +205,7 @@ const ProveedoresList: React.FC = () => {
       <Modal show={showModal} onHide={cancelarEliminacion} centered>
         <Modal.Header
           closeButton
-          style={{ backgroundColor: "#8f3d38", color: "white" }}
+          className="modal-header-brand"
         >
           <Modal.Title>Confirmar Eliminación</Modal.Title>
         </Modal.Header>

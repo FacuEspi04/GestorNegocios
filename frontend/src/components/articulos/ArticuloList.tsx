@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Table,
   Card,
@@ -12,13 +12,12 @@ import {
 } from 'react-bootstrap';
 import {
   Search,
-  ExclamationTriangle,
-  PlusCircle,
-  Trash,
-  PencilSquare,
-} from 'react-bootstrap-icons';
+  AlertTriangle,
+  Plus,
+  Trash2,
+  Pencil,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import logo from '../../assets/dietSanJose.png';
 import {
   getArticulos,
   deleteArticulo,
@@ -31,9 +30,7 @@ const ArticuloList: React.FC = () => {
   const [busqueda, setBusqueda] = useState('');
   const [articulos, setArticulos] = useState<Articulo[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [articuloAEliminar, setArticuloAEliminar] = useState<Articulo | null>(
-    null,
-  );
+  const [articuloAEliminar, setArticuloAEliminar] = useState<Articulo | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +57,7 @@ const ArticuloList: React.FC = () => {
     setArticuloAEliminar(articulo);
     setShowModal(true);
   };
-  
+
   const handleEditar = (id: number) => {
     navigate(`/articulos/editar/${id}`);
   };
@@ -85,106 +82,78 @@ const ArticuloList: React.FC = () => {
 
   const articulosFiltrados = useMemo(() => {
     const terminoBusqueda = busqueda.toLowerCase().trim();
-    if (!terminoBusqueda) {
-      return articulos;
-    }
+    if (!terminoBusqueda) return articulos;
     return articulos.filter((articulo) => {
       return (
-        (articulo.codigo_barras &&
-          articulo.codigo_barras.includes(terminoBusqueda)) ||
-        (articulo.nombre &&
-          articulo.nombre.toLowerCase().includes(terminoBusqueda)) ||
-        // Ahora buscamos en el objeto 'marca'
-        (articulo.marca &&
-          articulo.marca.nombre.toLowerCase().includes(terminoBusqueda)) ||
-        (articulo.categoria &&
-          articulo.categoria.nombre.toLowerCase().includes(terminoBusqueda)) 
+        (articulo.codigo_barras && articulo.codigo_barras.includes(terminoBusqueda)) ||
+        (articulo.nombre && articulo.nombre.toLowerCase().includes(terminoBusqueda)) ||
+        (articulo.marca && articulo.marca.nombre.toLowerCase().includes(terminoBusqueda)) ||
+        (articulo.categoria && articulo.categoria.nombre.toLowerCase().includes(terminoBusqueda))
       );
     });
   }, [articulos, busqueda]);
 
   const articulosStockBajo = useMemo(() => {
-    return articulos.filter(
-      (articulo) => articulo.stock <= articulo.stock_minimo,
-    );
+    return articulos.filter((articulo) => articulo.stock <= articulo.stock_minimo);
   }, [articulos]);
 
   return (
     <div>
-      {/* ... (Logo y Card.Header no cambian) ... */}
-      <div className="d-flex justify-content-end mb-3">
-        <img
-          src={logo}
-          alt="Dietética San José"
-          style={{ height: '80px', objectFit: 'contain' }}
-        />
+      <div className="page-header">
+        <h1 className="page-title">Artículos</h1>
+        <Button
+          variant="dark"
+          size="sm"
+          onClick={() => navigate('/articulos/nuevo')}
+          className="flex items-center gap-1.5"
+        >
+          <Plus size={16} />
+          Agregar Artículo
+        </Button>
       </div>
 
-      <Card className="mt-4 shadow-sm">
-        <Card.Header className="d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">Lista de Artículos</h5>
-          <Button
-            variant="success"
-            size="sm"
-            onClick={() => navigate('/articulos/nuevo')}
-          >
-            <PlusCircle className="me-1" />
-            Agregar Artículo
-          </Button>
-        </Card.Header>
-        <Card.Body>
-          
-          {articulosStockBajo.length > 0 && (
-            <Alert variant="warning" className="mb-3">
-              <div className="d-flex justify-content-between align-items-center">
-                <div className="d-flex align-items-center">
-                  <ExclamationTriangle
-                    size={32}
-                    className="me-3 text-warning"
-                  />
-                  <div>
-                    <strong>
-                      ¡Atención! Stock bajo en {articulosStockBajo.length}{" "}
-                      producto
-                      {articulosStockBajo.length !== 1 ? "s" : ""}:
-                    </strong>
-                    <small> 
-                      <ul className="mb-0 mt-1" style={{ fontSize: "0.9em" }}>
-                        {articulosStockBajo.map((art) => (
-                          <li key={art.id}>
-                            {art.nombre} (Stock: {art.stock} / Mín:{" "}
-                            {art.stock_minimo})
-                          </li>
-                        ))}
-                      </ul>
-                    </small>
-                  </div>
-                </div>
-                
-                <div className="ms-3">
-                  <Button
-                    variant="primary" 
-                    size="sm"
-                    onClick={() => navigate('/proveedores/pedidos/nuevo')}
-                    title="Ir a crear un nuevo pedido a proveedores"
-                  >
-                    Crear Pedido
-                  </Button>
-                </div>
+      {articulosStockBajo.length > 0 && (
+        <Alert variant="warning" className="mb-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <AlertTriangle size={24} className="text-amber-500 shrink-0" />
+              <div>
+                <strong>
+                  Stock bajo en {articulosStockBajo.length} producto
+                  {articulosStockBajo.length !== 1 ? "s" : ""}:
+                </strong>
+                <ul className="mb-0 mt-1 text-sm">
+                  {articulosStockBajo.map((art) => (
+                    <li key={art.id}>
+                      {art.nombre} (Stock: {art.stock} / Mín: {art.stock_minimo})
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </Alert>
-          )}
+            </div>
+            <Button
+              variant="outline-dark"
+              size="sm"
+              onClick={() => navigate('/proveedores/pedidos/nuevo')}
+            >
+              Crear Pedido
+            </Button>
+          </div>
+        </Alert>
+      )}
 
+      <Card>
+        <Card.Body>
           {error && !isDeleting && (
             <Alert variant="danger" onClose={() => setError(null)} dismissible>
               {error}
             </Alert>
           )}
 
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-4">
             <InputGroup>
-              <InputGroup.Text>
-                <Search />
+              <InputGroup.Text className="bg-white border-end-0">
+                <Search size={16} className="text-slate-400" />
               </InputGroup.Text>
               <Form.Control
                 type="text"
@@ -192,6 +161,7 @@ const ArticuloList: React.FC = () => {
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
                 autoFocus
+                className="border-start-0"
               />
             </InputGroup>
             <Form.Text className="text-muted">
@@ -202,13 +172,13 @@ const ArticuloList: React.FC = () => {
           </Form.Group>
 
           {isLoading ? (
-            <div className="text-center my-5">
-              <Spinner animation="border" variant="success" />
-              <p className="mt-2">Cargando artículos...</p>
+            <div className="text-center py-10">
+              <Spinner animation="border" />
+              <p className="mt-2 text-slate-500">Cargando artículos...</p>
             </div>
           ) : (
-            <Table striped bordered hover responsive>
-              <thead style={{ backgroundColor: '#8f3d38', color: 'white' }}>
+            <Table striped bordered hover responsive className="table-header-brand">
+              <thead>
                 <tr>
                   <th>ID</th>
                   <th>Código de Barras</th>
@@ -226,9 +196,9 @@ const ArticuloList: React.FC = () => {
                     <tr key={articulo.id}>
                       <td>{articulo.id}</td>
                       <td>
-                        <code>{articulo.codigo_barras}</code>
+                        <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded">{articulo.codigo_barras}</code>
                       </td>
-                      <td>{articulo.nombre}</td>
+                      <td className="font-medium">{articulo.nombre}</td>
                       <td>
                         {articulo.marca ? articulo.marca.nombre : <small className="text-muted">N/A</small>}
                       </td>
@@ -240,30 +210,32 @@ const ArticuloList: React.FC = () => {
                         )}
                       </td>
                       <td>{articulo.stock_minimo}</td>
-                      <td>${Number(articulo.precio).toFixed(2)}</td>
-                      <td className="text-center d-flex gap-2 justify-content-center">
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          onClick={() => handleEditar(articulo.id)}
-                          title="Editar artículo"
-                        >
-                          <PencilSquare />
-                        </Button>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          onClick={() => confirmarEliminacion(articulo)}
-                          title="Eliminar artículo"
-                        >
-                          <Trash />
-                        </Button>
+                      <td className="font-medium">${Number(articulo.precio).toFixed(2)}</td>
+                      <td className="text-center">
+                        <div className="flex gap-1.5 justify-center">
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={() => handleEditar(articulo.id)}
+                            title="Editar artículo"
+                          >
+                            <Pencil size={14} />
+                          </Button>
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            onClick={() => confirmarEliminacion(articulo)}
+                            title="Eliminar artículo"
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className="text-center">
+                    <td colSpan={8} className="text-center py-4 text-slate-500">
                       {busqueda
                         ? `No se encontraron artículos que coincidan con "${busqueda}"`
                         : 'No hay artículos disponibles. Comienza agregando uno.'}
@@ -276,12 +248,9 @@ const ArticuloList: React.FC = () => {
         </Card.Body>
       </Card>
 
-      {/* Modal de confirmación de borrado */}
+      {/* Modal de confirmación */}
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-        <Modal.Header
-          closeButton
-          style={{ backgroundColor: '#8f3d38', color: 'white' }}
-        >
+        <Modal.Header closeButton className="modal-header-brand">
           <Modal.Title>Confirmar Eliminación</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -292,10 +261,9 @@ const ArticuloList: React.FC = () => {
               <div className="alert alert-warning">
                 <strong>{articuloAEliminar.nombre}</strong>
                 <br />
-                {/* --- TAMBIÉN CORREGIMOS AQUÍ --- */}
                 {articuloAEliminar.marca && (
                   <>
-                    Marca: {articuloAEliminar.marca.nombre} 
+                    Marca: {articuloAEliminar.marca.nombre}
                     <br />
                   </>
                 )}
@@ -310,18 +278,10 @@ const ArticuloList: React.FC = () => {
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button
-            variant="secondary"
-            onClick={() => setShowModal(false)}
-            disabled={isDeleting}
-          >
+          <Button variant="secondary" onClick={() => setShowModal(false)} disabled={isDeleting}>
             Cancelar
           </Button>
-          <Button
-            variant="danger"
-            onClick={eliminarArticulo}
-            disabled={isDeleting}
-          >
+          <Button variant="danger" onClick={eliminarArticulo} disabled={isDeleting}>
             {isDeleting ? (
               <>
                 <Spinner animation="border" size="sm" className="me-2" />
@@ -338,4 +298,3 @@ const ArticuloList: React.FC = () => {
 };
 
 export default ArticuloList;
-
