@@ -254,114 +254,205 @@ const VentasList: React.FC = () => {
     }
   };
 
+  const addPDFHeader = (doc: jsPDF, title: string, fechaFormateada: string) => {
+    const margin = 14;
+    doc.setFillColor(143, 61, 56);
+    doc.rect(0, 0, doc.internal.pageSize.width, 30, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.text(title, margin, 20);
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    const rightText = `Generado: ${formatearFecha(new Date())} - ${formatearHora(new Date())}`;
+    const textWidth = doc.getTextWidth(rightText);
+    doc.text(rightText, doc.internal.pageSize.width - margin - textWidth, 20);
+    
+    doc.setTextColor(50, 50, 50);
+  };
+
   const handleDownloadPDF = () => {
     if (isLoading || (ventas.length === 0 && retiros.length === 0)) return;
     const doc = new jsPDF();
-    const fechaFormateada = formatearFecha(fechaSeleccionada);
     const margin = 14;
-    doc.setFontSize(18);
-    doc.text(`Resumen de Caja - ${fechaFormateada}`, margin, 22);
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Generado el ${formatearFecha(new Date())} a las ${formatearHora(new Date())}`, margin, 28);
+    
+    addPDFHeader(doc, 'Resumen General de Caja', formatearFecha(fechaSeleccionada));
+
+    let currentY = 40;
     doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text("Totales Generales del Día (Recaudado)", margin, 42);
+    doc.setFont("helvetica", "bold");
+    doc.text("Totales Generales del Día", margin, currentY);
+
     autoTable(doc, {
-      startY: 46,
+      startY: currentY + 4,
       head: [['Concepto', 'Monto']],
       body: [
-        ['Total Recaudado (Ingresos Reales)', `$${totalRecaudadoDia.toFixed(2)}`],
-        ['Total Retiros de Caja', `-$${totalRetirosDelDia.toFixed(2)}`],
-        ['NETO EN CAJA', `$${netoTotalDia.toFixed(2)}`],
+        ['Total Recaudado (Ingresos Reales)', formatearMoneda(totalRecaudadoDia)],
+        ['Total Retiros de Caja', `-${formatearMoneda(totalRetirosDelDia)}`],
+        ['NETO EN CAJA', formatearMoneda(netoTotalDia)],
       ],
       theme: 'striped',
-      headStyles: { fillColor: [143, 61, 56] },
-      bodyStyles: { fontStyle: 'bold' },
-      styles: { halign: 'center' },
-      margin: { left: margin },
+      headStyles: { fillColor: [45, 68, 84], halign: 'left', fontSize: 11 },
+      bodyStyles: { fontStyle: 'bold', fontSize: 11 },
+      columnStyles: { 0: { halign: 'left' }, 1: { halign: 'right' } },
+      margin: { left: margin, right: margin },
+      didParseCell: function (data) {
+        if (data.row.index === 2 && data.section === 'body') {
+           data.cell.styles.fillColor = [240, 240, 240];
+           data.cell.styles.textColor = [143, 61, 56];
+        }
+      }
     });
-    if (ventas.length > 0) {
-      const finalY = (doc as any).lastAutoTable.finalY + 12;
-      doc.text("Detalle de Movimientos", margin, finalY);
+
+    currentY = (doc as any).lastAutoTable.finalY + 12;
+
+    if (retiros.length > 0) {
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Detalle de Retiros", margin, currentY);
       autoTable(doc, {
-        startY: finalY + 4,
-        head: [['Hora', 'Cliente', 'Pago', 'Total Venta', 'Pagado', 'Estado']],
+        startY: currentY + 4,
+        head: [['Hora', 'Motivo', 'Medio de Pago', 'Monto']],
+        body: retiros.map(r => [
+          formatearHora(r.fechaHora),
+          r.motivo.length > 30 ? r.motivo.substring(0, 30) + '...' : r.motivo,
+          ((r as any).formaPago || 'Efectivo').toUpperCase(),
+          formatearMoneda(r.monto)
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [143, 61, 56], halign: 'left', fontSize: 10 },
+        bodyStyles: { fontSize: 10 },
+        columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
+        margin: { left: margin, right: margin }
+      });
+      currentY = (doc as any).lastAutoTable.finalY + 12;
+    }
+
+    if (ventas.length > 0) {
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Detalle de Movimientos de Venta", margin, currentY);
+      autoTable(doc, {
+        startY: currentY + 4,
+        head: [['Hora', 'Cliente', 'Forma Pago', 'Total Venta', 'Pagado', 'Estado']],
         body: ventas.map(v => [
           formatearHora(v.fechaHora),
           v.clienteNombre,
           formatearFormaPago(v.formaPago, v.estado),
-          `$${Number(v.total).toFixed(2)}`,
-          `$${Number(v.monto_pagado).toFixed(2)}`, 
+          formatearMoneda(Number(v.total)),
+          formatearMoneda(Number(v.monto_pagado)),
           getTextoEstado(v),
         ]),
-        headStyles: { fillColor: [143, 61, 56] },
+        theme: 'striped',
+        headStyles: { fillColor: [143, 61, 56], halign: 'left', fontSize: 10 },
+        bodyStyles: { fontSize: 10 },
+        columnStyles: { 
+          3: { halign: 'right' },
+          4: { halign: 'right', fontStyle: 'bold' }
+        },
+        margin: { left: margin, right: margin }
       });
     }
-    doc.save(`resumenDeCaja_${fechaSeleccionada}.pdf`);
+
+    doc.save(`ResumenCaja_${fechaSeleccionada}.pdf`);
   };
 
   const handleDownloadPDFMañana = () => {
     if (isLoading || (ventasMañana.length === 0 && retirosMañana.length === 0)) return;
     const doc = new jsPDF();
-    const fechaFormateada = formatearFecha(fechaSeleccionada);
     const margin = 14;
-    doc.setFontSize(18);
-    doc.text(`Resumen de Caja - TURNO MAÑANA - ${fechaFormateada}`, margin, 22);
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Generado el ${formatearFecha(new Date())} a las ${formatearHora(new Date())}`, margin, 28);
+    
+    addPDFHeader(doc, 'Resumen Caja - Turno Mañana', formatearFecha(fechaSeleccionada));
+
+    let currentY = 40;
     doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text("Totales Generales (Turno Mañana)", margin, 42);
+    doc.setFont("helvetica", "bold");
+    doc.text("Totales Generales (Turno Mañana)", margin, currentY);
+
     autoTable(doc, {
-      startY: 46,
+      startY: currentY + 4,
       head: [['Concepto', 'Monto']],
       body: [
-        ['Total Recaudado', `$${totalRecaudadoMañana.toFixed(2)}`],
-        ['Total Retiros', `-$${totalRetirosMañana.toFixed(2)}`],
-        ['NETO EN CAJA', `$${netoMañana.toFixed(2)}`],
+        ['Total Recaudado', formatearMoneda(totalRecaudadoMañana)],
+        ['Total Retiros', `-${formatearMoneda(totalRetirosMañana)}`],
+        ['NETO EN CAJA', formatearMoneda(netoMañana)],
       ],
       theme: 'striped',
-      headStyles: { fillColor: [143, 61, 56] },
+      headStyles: { fillColor: [45, 68, 84], halign: 'left' },
       bodyStyles: { fontStyle: 'bold' },
-      styles: { halign: 'center' },
-      margin: { left: margin },
+      columnStyles: { 0: { halign: 'left' }, 1: { halign: 'right' } },
+      margin: { left: margin, right: margin },
+      didParseCell: function (data) {
+        if (data.row.index === 2 && data.section === 'body') {
+           data.cell.styles.fillColor = [240, 240, 240];
+           data.cell.styles.textColor = [143, 61, 56];
+        }
+      }
     });
-    const finalY1 = (doc as any).lastAutoTable.finalY + 12;
+
+    currentY = (doc as any).lastAutoTable.finalY + 12;
     doc.setFontSize(14);
-    doc.text("Ventas Turno Mañana", margin, finalY1);
+    doc.text("Resumen por Forma de Pago", margin, currentY);
+
     autoTable(doc, {
-      startY: finalY1 + 4,
+      startY: currentY + 4,
       head: [['Forma de Pago', 'Monto']],
       body: [
-        ['Efectivo', `$${totalesMañana.efectivo.toFixed(2)}`],
-        ['Débito', `$${totalesMañana.debito.toFixed(2)}`],
-        ['Crédito', `$${totalesMañana.credito.toFixed(2)}`],
-        ['Transferencia', `$${totalesMañana.transferencia.toFixed(2)}`],
+        ['Efectivo', formatearMoneda(totalesMañana.efectivo)],
+        ['Débito', formatearMoneda(totalesMañana.debito)],
+        ['Crédito', formatearMoneda(totalesMañana.credito)],
+        ['Transferencia', formatearMoneda(totalesMañana.transferencia)],
       ],
       theme: 'grid',
-      headStyles: { fillColor: [45, 68, 84] },
-      });
-    if (ventasMañana.length > 0) {
-      const finalY2 = (doc as any).lastAutoTable.finalY + 12;
+      headStyles: { fillColor: [45, 68, 84], halign: 'left' },
+      columnStyles: { 0: { halign: 'left' }, 1: { halign: 'right' } },
+      margin: { left: margin, right: margin }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 12;
+    if (retirosMañana.length > 0) {
       doc.setFontSize(14);
-      doc.text("Detalle de Ventas Turno Mañana", margin, finalY2);
+      doc.setFont("helvetica", "bold");
+      doc.text("Detalle de Retiros (Turno Mañana)", margin, currentY);
       autoTable(doc, {
-        startY: finalY2 + 4,
+        startY: currentY + 4,
+        head: [['Hora', 'Motivo', 'Medio de Pago', 'Monto']],
+        body: retirosMañana.map(r => [
+          formatearHora(r.fechaHora),
+          r.motivo.length > 30 ? r.motivo.substring(0, 30) + '...' : r.motivo,
+          ((r as any).formaPago || 'Efectivo').toUpperCase(),
+          formatearMoneda(r.monto)
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [143, 61, 56] },
+        columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } }
+      });
+      currentY = (doc as any).lastAutoTable.finalY + 12;
+    }
+
+    if (ventasMañana.length > 0) {
+      doc.setFontSize(14);
+      doc.text("Detalle de Ventas (Turno Mañana)", margin, currentY);
+      autoTable(doc, {
+        startY: currentY + 4,
         head: [['Hora', 'Cliente', 'Forma Pago', 'Total', 'Pagado', 'Estado']],
         body: ventasMañana.map(v => [
           formatearHora(v.fechaHora),
           v.clienteNombre,
           formatearFormaPago(v.formaPago, v.estado),
-          `$${Number(v.total).toFixed(2)}`,
-          `$${Number(v.monto_pagado).toFixed(2)}`,
-          getTextoEstado(v),
+          formatearMoneda(Number(v.total)),
+          formatearMoneda(Number(v.monto_pagado)),
+          getTextoEstado(v)
         ]),
-        headStyles: { fillColor: [143, 61, 56] },
+        theme: 'striped',
+        headStyles: { fillColor: [143, 61, 56], halign: 'left' },
+        columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' } }
       });
     }
-    doc.save(`resumenCajaMañana${fechaSeleccionada}.pdf`);
+
+    doc.save(`ResumenCajaMañana_${fechaSeleccionada}.pdf`);
   };
 
   return (
