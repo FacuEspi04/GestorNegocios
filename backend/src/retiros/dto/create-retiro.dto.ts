@@ -8,5 +8,9 @@ export class CreateRetiroDto {
   @IsString()
   @IsNotEmpty({ message: 'El motivo es obligatorio' })
   motivo: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'La forma de pago es obligatoria' })
+  formaPago: string;
 }
 

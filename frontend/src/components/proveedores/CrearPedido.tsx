@@ -14,6 +14,7 @@ import {
 } from "react-bootstrap";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { formatearMoneda, formatearPeso } from "../../utils/formatters";
 import { 
   FileDown, 
   ClipboardPlus, 
@@ -26,6 +27,8 @@ import {
 } from "lucide-react";
 import {
   createPedido,
+  updatePedido,
+  getPedidoById,
   getArticulos,
   getProveedores,
   type Articulo,
@@ -33,7 +36,7 @@ import {
   type Pedido,
   type Proveedor,
 } from "../../services/apiService";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 interface ItemPedido {
   articulo: Articulo;
@@ -55,13 +58,16 @@ const CrearPedido: React.FC = () => {
   
   // --- Estados de UI y Filtros ---
   const navigate = useNavigate();
+  const { id } = useParams();
   const [busqueda, setBusqueda] = useState(""); // Para filtrar artículos
   const [showConfirm, setShowConfirm] = useState(false);
   const [exito, setExito] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [pedidoConfirmado, setPedidoConfirmado] = useState<PedidoGuardado | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+  const [, setIsDraftMode] = useState(false);
+  const [pedidoId, setPedidoId] = useState<number | null>(null);
 
   // Carga inicial
   useEffect(() => {
@@ -81,6 +87,26 @@ const CrearPedido: React.FC = () => {
 
         setProveedores(provData);
         setCatalogoArticulos(articulosMapeados);
+
+        if (id) {
+          const pedidoDraft = await getPedidoById(Number(id));
+          if (pedidoDraft) {
+            setPedidoId(pedidoDraft.id);
+            if (pedidoDraft.proveedorId) setProveedorId(String(pedidoDraft.proveedorId));
+            if (pedidoDraft.notas) setObservaciones(pedidoDraft.notas);
+            if (pedidoDraft.estado === 'Borrador') {
+              setIsDraftMode(true);
+            }
+            if (pedidoDraft.items) {
+               const mappedItems = pedidoDraft.items.map((i: any) => ({
+                 articulo: articulosMapeados.find(a => Number(a.id) === Number(i.articulo?.id || i.articuloId)) || 
+                           {...i.articulo, id: i.articuloId || i.articulo?.id},
+                 cantidad: i.cantidad
+               }));
+               setItemsPedido(mappedItems as any);
+            }
+          }
+        }
       } catch (err: any) {
         setError(err.message || "Error al cargar datos iniciales");
       } finally {
@@ -88,7 +114,7 @@ const CrearPedido: React.FC = () => {
       }
     };
     cargarDatos();
-  }, []);
+  }, [id]);
 
   // --- LÓGICA DE FILTRADO ---
   const articulosFiltrados = useMemo(() => {
@@ -146,7 +172,9 @@ const CrearPedido: React.FC = () => {
 
   // Cambiar cantidad manualmente (input)
   const cambiarCantidadManual = (articuloId: number, nuevaCantidad: number) => {
-      if (nuevaCantidad < 1) return;
+      const existente = itemsPedido.find((i) => i.articulo.id === articuloId);
+      if (!existente) return;
+      if (nuevaCantidad <= 0) return;
       setItemsPedido(itemsPedido.map(i => i.articulo.id === articuloId ? {...i, cantidad: nuevaCantidad} : i));
   }
 
@@ -174,6 +202,7 @@ const CrearPedido: React.FC = () => {
     const pedidoDto: CreatePedidoDto = {
       proveedorId: Number(proveedorId),
       notas: observaciones || undefined,
+      estado: "Pendiente",
       items: itemsPedido.map((item) => ({
         articuloId: item.articulo.id,
         cantidad: item.cantidad,
@@ -181,19 +210,67 @@ const CrearPedido: React.FC = () => {
     };
 
     try {
-      const pedidoGuardado = await createPedido(pedidoDto);
+      let pedidoGuardado;
+      if (pedidoId) {
+        pedidoGuardado = await updatePedido(pedidoId, pedidoDto);
+      } else {
+        pedidoGuardado = await createPedido(pedidoDto);
+      }
       setPedidoConfirmado(pedidoGuardado);
       setShowConfirm(false);
-      setExito("¡Pedido creado exitosamente!");
+      setExito("¡Pedido confirmado exitosamente!");
       
       // Limpiar formulario pero mantener confirmación visible
       setItemsPedido([]);
       setObservaciones("");
+      setPedidoId(null);
+      setIsDraftMode(false);
       
       setTimeout(() => setExito(""), 3000);
     } catch (err: any) {
       console.error("Error al confirmar pedido:", err);
       setError(err.message || "Error al confirmar el pedido");
+      setShowConfirm(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const guardarComoBorrador = async () => {
+    setIsSubmitting(true);
+    setError("");
+
+    const pedidoDto: CreatePedidoDto = {
+      proveedorId: Number(proveedorId),
+      notas: observaciones || undefined,
+      estado: "Borrador",
+      items: itemsPedido.map((item) => ({
+        articuloId: item.articulo.id,
+        cantidad: item.cantidad,
+      })),
+    };
+
+    try {
+      let pedidoGuardado;
+      if (pedidoId) {
+        pedidoGuardado = await updatePedido(pedidoId, pedidoDto);
+      } else {
+        pedidoGuardado = await createPedido(pedidoDto);
+      }
+      setPedidoConfirmado(pedidoGuardado);
+      setShowConfirm(false);
+      setExito("¡Pedido guardado como Borrador! Puedes editarlo después.");
+      
+      setItemsPedido([]);
+      setObservaciones("");
+      setPedidoId(null);
+      setIsDraftMode(false);
+      
+      setTimeout(() => setExito(""), 3000);
+      navigate("/proveedores/pedidos/lista");
+    } catch (err: any) {
+      console.error("Error al guardar como borrador:", err);
+      setError(err.message || "Error al guardar el borrador");
       setShowConfirm(false);
     } finally {
       setIsSubmitting(false);
@@ -210,21 +287,36 @@ const CrearPedido: React.FC = () => {
     setBusqueda("");
   };
 
+  const addPDFHeader = (doc: jsPDF, title: string, rightText: string) => {
+    const margin = 14;
+    doc.setFillColor(30, 41, 59);
+    doc.rect(0, 0, doc.internal.pageSize.width, 26, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text(title, margin, 17);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const textWidth = doc.getTextWidth(rightText);
+    doc.text(rightText, doc.internal.pageSize.width - margin - textWidth, 17);
+
+    doc.setTextColor(50, 50, 50);
+  };
+
   // --- PDF Generator ---
   const imprimirPedido = (pedido: PedidoGuardado) => {
     const doc = new jsPDF();
     const margin = 14;
     const fechaFormateada = new Date(pedido.fechaPedido).toLocaleDateString("es-AR");
 
-    doc.setFontSize(18);
-    doc.text(`Pedido a Proveedor`, margin, 22);
+    addPDFHeader(doc, "Pedido a Proveedor", `Fecha: ${fechaFormateada}`);
+
     doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Fecha: ${fechaFormateada}`, margin, 28);
     doc.text(`N° Pedido: ${pedido.id}`, margin, 34);
 
     doc.setFontSize(14);
-    doc.setTextColor(0);
     doc.text("Proveedor", margin, 46);
     doc.setFontSize(11);
     let startY = 52;
@@ -238,10 +330,21 @@ const CrearPedido: React.FC = () => {
     startY += 10;
     autoTable(doc, {
       startY: startY + 4,
-      head: [["Artículo", "Cant."]],
-      body: pedido.items.map((i) => [i.articulo.nombre, i.cantidad]),
+      head: [["Artículo", "Cant.", "P. Unit", "Subtotal"]],
+      body: pedido.items.map((i) => {
+        const cantidadTxt = i.articulo.esPesable ? formatearPeso(i.cantidad) : i.cantidad;
+        const precioUnitario = Number(i.precioUnitario);
+        const subtotal = Number(i.subtotal);
+        return [
+          i.articulo.nombre,
+          cantidadTxt,
+          Number.isFinite(precioUnitario) ? formatearMoneda(precioUnitario) : "-",
+          Number.isFinite(subtotal) ? formatearMoneda(subtotal) : "-",
+        ];
+      }),
       theme: "striped",
-      headStyles: { fillColor: [143, 61, 56] },
+      headStyles: { fillColor: [30, 41, 59] },
+      columnStyles: { 2: { halign: "right" }, 3: { halign: "right" } },
     });
 
     doc.save(`pedido_${pedido.proveedor.nombre}_${fechaFormateada}.pdf`);
@@ -334,6 +437,7 @@ const CrearPedido: React.FC = () => {
                                 <tr>
                                     <th>Artículo</th>
                                     <th className="text-center">Stock</th>
+                                    <th className="text-center">Mínimo</th>
                                     <th className="text-center">Acción</th>
                                 </tr>
                             </thead>
@@ -344,6 +448,7 @@ const CrearPedido: React.FC = () => {
                                         <td className="text-center align-middle">
                                             <Badge bg="success">{art.stock}</Badge>
                                         </td>
+                                        <td className="text-center align-middle text-muted">{art.stock_minimo}</td>
                                         <td className="text-center align-middle">
                                             <Button 
                                                 size="sm" 
@@ -419,8 +524,10 @@ const CrearPedido: React.FC = () => {
                                                         <Button variant="outline-secondary" onClick={() => restarDelPedido(item.articulo.id)}><Minus size={14}/></Button>
                                                         <Form.Control 
                                                             className="text-center px-0" 
+                                                            type="number"
+                                                            step={item.articulo.esPesable ? "0.001" : "1"}
                                                             value={item.cantidad} 
-                                                            onChange={(e) => cambiarCantidadManual(item.articulo.id, parseInt(e.target.value) || 1)}
+                                                            onChange={(e) => cambiarCantidadManual(item.articulo.id, parseFloat(e.target.value) || 0)}
                                                         />
                                                         <Button variant="outline-secondary" onClick={() => agregarAlPedido(item.articulo)}><Plus size={14}/></Button>
                                                     </InputGroup>
@@ -488,6 +595,9 @@ const CrearPedido: React.FC = () => {
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowConfirm(false)} disabled={isSubmitting}>
             Cancelar
+          </Button>
+          <Button variant="outline-info" onClick={guardarComoBorrador} disabled={isSubmitting}>
+            {isSubmitting ? <Spinner size="sm" animation="border"/> : "Guardar como Borrador"}
           </Button>
           <Button variant="success" onClick={confirmarPedido} disabled={isSubmitting}>
             {isSubmitting ? <><Spinner size="sm" animation="border"/> Guardando...</> : "Confirmar y Guardar"}

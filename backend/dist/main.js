@@ -40,10 +40,10 @@ const articulos_module_1 = __webpack_require__(21);
 const categorias_module_1 = __webpack_require__(27);
 const proveedores_module_1 = __webpack_require__(33);
 const pedidos_module_1 = __webpack_require__(37);
-const ventas_module_1 = __webpack_require__(42);
-const clientes_module_1 = __webpack_require__(47);
-const retiros_module_1 = __webpack_require__(52);
-const marcas_module_1 = __webpack_require__(56);
+const ventas_module_1 = __webpack_require__(43);
+const clientes_module_1 = __webpack_require__(48);
+const retiros_module_1 = __webpack_require__(53);
+const marcas_module_1 = __webpack_require__(57);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -146,6 +146,7 @@ let Articulo = class Articulo {
     precio;
     stock;
     stock_minimo;
+    esPesable;
     categoriaId;
     categoria;
     marcaId;
@@ -174,13 +175,17 @@ __decorate([
     __metadata("design:type", Number)
 ], Articulo.prototype, "precio", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int', default: 0 }),
+    (0, typeorm_1.Column)({ type: 'decimal', precision: 10, scale: 3, default: 0 }),
     __metadata("design:type", Number)
 ], Articulo.prototype, "stock", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'stock_minimo', type: 'int', default: 0 }),
+    (0, typeorm_1.Column)({ name: 'stock_minimo', type: 'decimal', precision: 10, scale: 3, default: 0 }),
     __metadata("design:type", Number)
 ], Articulo.prototype, "stock_minimo", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'es_pesable', type: 'boolean', default: false }),
+    __metadata("design:type", Boolean)
+], Articulo.prototype, "esPesable", void 0);
 __decorate([
     (0, typeorm_1.Column)({ name: 'categoria_id', type: 'integer', nullable: true }),
     __metadata("design:type", Object)
@@ -352,7 +357,7 @@ __decorate([
     __metadata("design:type", Number)
 ], PedidoDetalle.prototype, "articuloId", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ type: 'decimal', precision: 10, scale: 3 }),
     __metadata("design:type", Number)
 ], PedidoDetalle.prototype, "cantidad", void 0);
 __decorate([
@@ -425,7 +430,7 @@ __decorate([
 __decorate([
     (0, typeorm_1.Column)({
         type: 'varchar',
-        enum: ['Pendiente', 'En_Transito', 'Recibido', 'Cancelado'],
+        enum: ['Borrador', 'Pendiente', 'En_Transito', 'Recibido', 'Cancelado'],
         default: 'Pendiente',
     }),
     __metadata("design:type", String)
@@ -595,7 +600,7 @@ __decorate([
     __metadata("design:type", typeof (_b = typeof articulo_entity_1.Articulo !== "undefined" && articulo_entity_1.Articulo) === "function" ? _b : Object)
 ], VentaDetalle.prototype, "articulo", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int' }),
+    (0, typeorm_1.Column)({ type: 'decimal', precision: 10, scale: 3 }),
     __metadata("design:type", Number)
 ], VentaDetalle.prototype, "cantidad", void 0);
 __decorate([
@@ -842,6 +847,7 @@ let Retiro = class Retiro {
     fechaHora;
     monto;
     motivo;
+    formaPago;
     turno;
     createdAt;
 };
@@ -862,6 +868,10 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'text' }),
     __metadata("design:type", String)
 ], Retiro.prototype, "motivo", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 50, default: 'Efectivo' }),
+    __metadata("design:type", String)
+], Retiro.prototype, "formaPago", void 0);
 __decorate([
     (0, typeorm_1.Column)({
         type: 'varchar',
@@ -1163,6 +1173,7 @@ class CreateArticuloDto {
     precio;
     stock;
     stock_minimo;
+    esPesable;
     categoriaId;
 }
 exports.CreateArticuloDto = CreateArticuloDto;
@@ -1187,15 +1198,20 @@ __decorate([
     __metadata("design:type", Number)
 ], CreateArticuloDto.prototype, "precio", void 0);
 __decorate([
-    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], CreateArticuloDto.prototype, "stock", void 0);
 __decorate([
-    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], CreateArticuloDto.prototype, "stock_minimo", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateArticuloDto.prototype, "esPesable", void 0);
 __decorate([
     (0, class_validator_1.IsInt)(),
     __metadata("design:type", Number)
@@ -1231,6 +1247,7 @@ class UpdateArticuloDto {
     precio;
     stock;
     stock_minimo;
+    esPesable;
     categoriaId;
     marcaId;
 }
@@ -1253,17 +1270,22 @@ __decorate([
     __metadata("design:type", Number)
 ], UpdateArticuloDto.prototype, "precio", void 0);
 __decorate([
-    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(0),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
 ], UpdateArticuloDto.prototype, "stock", void 0);
 __decorate([
-    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(0),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
 ], UpdateArticuloDto.prototype, "stock_minimo", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], UpdateArticuloDto.prototype, "esPesable", void 0);
 __decorate([
     (0, class_validator_1.IsInt)(),
     (0, class_validator_1.IsPositive)(),
@@ -1876,7 +1898,7 @@ let PedidosService = PedidosService_1 = class PedidosService {
             pedido.notas = notas || null;
             pedido.fechaPedido = new Date();
             pedido.total = totalPedido;
-            pedido.estado = 'Pendiente';
+            pedido.estado = createPedidoDto.estado || 'Pendiente';
             const pedidoGuardado = await queryRunner.manager.save(pedido);
             for (const detalle of detallesPedido) {
                 detalle.pedidoId = pedidoGuardado.id;
@@ -1950,6 +1972,51 @@ let PedidosService = PedidosService_1 = class PedidosService {
             await queryRunner.release();
         }
     }
+    async update(id, updatePedidoDto) {
+        const pedido = await this.findOne(id);
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+        try {
+            if (updatePedidoDto.proveedorId)
+                pedido.proveedorId = updatePedidoDto.proveedorId;
+            if (updatePedidoDto.notas !== undefined)
+                pedido.notas = updatePedidoDto.notas;
+            if (updatePedidoDto.estado)
+                pedido.estado = updatePedidoDto.estado;
+            if (updatePedidoDto.items && updatePedidoDto.items.length > 0) {
+                await queryRunner.manager.delete(pedido_detalle_entity_1.PedidoDetalle, { pedidoId: id });
+                let totalPedido = 0;
+                for (const itemDto of updatePedidoDto.items) {
+                    const articulo = await this.articuloRepository.findOneBy({ id: itemDto.articuloId });
+                    if (!articulo)
+                        continue;
+                    const precioUnitario = Number(articulo.precio);
+                    const subtotal = precioUnitario * itemDto.cantidad;
+                    totalPedido += subtotal;
+                    const detalle = new pedido_detalle_entity_1.PedidoDetalle();
+                    detalle.pedidoId = pedido.id;
+                    detalle.articuloId = itemDto.articuloId;
+                    detalle.cantidad = itemDto.cantidad;
+                    detalle.precioUnitario = precioUnitario;
+                    detalle.subtotal = subtotal;
+                    await queryRunner.manager.save(detalle);
+                }
+                pedido.total = totalPedido;
+            }
+            const pedidoActualizado = await queryRunner.manager.save(pedido);
+            await queryRunner.commitTransaction();
+            this.logger.log(`Pedido #${pedidoActualizado.id} actualizado exitosamente.`);
+            return this.findOne(pedidoActualizado.id);
+        }
+        catch (err) {
+            await queryRunner.rollbackTransaction();
+            throw err;
+        }
+        finally {
+            await queryRunner.release();
+        }
+    }
 };
 exports.PedidosService = PedidosService;
 exports.PedidosService = PedidosService = PedidosService_1 = __decorate([
@@ -1978,12 +2045,13 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b;
+var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PedidosController = void 0;
 const common_1 = __webpack_require__(3);
 const pedidos_service_1 = __webpack_require__(38);
 const create_pedido_dto_1 = __webpack_require__(40);
+const update_pedido_dto_1 = __webpack_require__(42);
 let PedidosController = class PedidosController {
     pedidosService;
     constructor(pedidosService) {
@@ -2001,6 +2069,9 @@ let PedidosController = class PedidosController {
     }
     remove(id) {
         return this.pedidosService.remove(id);
+    }
+    update(id, updatePedidoDto) {
+        return this.pedidosService.update(id, updatePedidoDto);
     }
 };
 exports.PedidosController = PedidosController;
@@ -2035,6 +2106,14 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", void 0)
 ], PedidosController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Put)(':id'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)(new common_1.ValidationPipe())),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, typeof (_c = typeof update_pedido_dto_1.UpdatePedidoDto !== "undefined" && update_pedido_dto_1.UpdatePedidoDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", void 0)
+], PedidosController.prototype, "update", null);
 exports.PedidosController = PedidosController = __decorate([
     (0, common_1.Controller)('api/pedidos'),
     __metadata("design:paramtypes", [typeof (_a = typeof pedidos_service_1.PedidosService !== "undefined" && pedidos_service_1.PedidosService) === "function" ? _a : Object])
@@ -2069,13 +2148,14 @@ __decorate([
     __metadata("design:type", Number)
 ], CreatePedidoItemDto.prototype, "articuloId", void 0);
 __decorate([
-    (0, class_validator_1.IsInt)(),
-    (0, class_validator_1.IsPositive)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0.001),
     __metadata("design:type", Number)
 ], CreatePedidoItemDto.prototype, "cantidad", void 0);
 class CreatePedidoDto {
     proveedorId;
     notas;
+    estado;
     items;
 }
 exports.CreatePedidoDto = CreatePedidoDto;
@@ -2089,6 +2169,11 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreatePedidoDto.prototype, "notas", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreatePedidoDto.prototype, "estado", void 0);
 __decorate([
     (0, class_validator_1.IsArray)(),
     (0, class_validator_1.ValidateNested)({ each: true }),
@@ -2106,6 +2191,20 @@ module.exports = require("class-transformer");
 
 /***/ }),
 /* 42 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UpdatePedidoDto = void 0;
+const mapped_types_1 = __webpack_require__(32);
+const create_pedido_dto_1 = __webpack_require__(40);
+class UpdatePedidoDto extends (0, mapped_types_1.PartialType)(create_pedido_dto_1.CreatePedidoDto) {
+}
+exports.UpdatePedidoDto = UpdatePedidoDto;
+
+
+/***/ }),
+/* 43 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2122,8 +2221,8 @@ const typeorm_1 = __webpack_require__(5);
 const articulo_entity_1 = __webpack_require__(8);
 const venta_entity_1 = __webpack_require__(16);
 const venta_detalle_entity_1 = __webpack_require__(15);
-const ventas_service_1 = __webpack_require__(43);
-const ventas_controller_1 = __webpack_require__(44);
+const ventas_service_1 = __webpack_require__(44);
+const ventas_controller_1 = __webpack_require__(45);
 const cliente_entity_1 = __webpack_require__(17);
 let VentasModule = class VentasModule {
 };
@@ -2145,7 +2244,7 @@ exports.VentasModule = VentasModule = __decorate([
 
 
 /***/ }),
-/* 43 */
+/* 44 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2214,7 +2313,9 @@ let VentasService = VentasService_1 = class VentasService {
                 articulo.stock -= itemDto.cantidad;
                 await queryRunner.manager.save(articulo_entity_1.Articulo, articulo);
                 const precioUnitario = Number(articulo.precio);
-                const subtotalItem = precioUnitario * itemDto.cantidad;
+                const subtotalItem = itemDto.subtotalPersonalizado !== undefined
+                    ? Number(itemDto.subtotalPersonalizado)
+                    : precioUnitario * itemDto.cantidad;
                 subtotalVenta += subtotalItem;
                 const detalle = new venta_detalle_entity_1.VentaDetalle();
                 detalle.articuloId = itemDto.articuloId;
@@ -2272,7 +2373,9 @@ let VentasService = VentasService_1 = class VentasService {
     }
     async findPendientes() {
         return this.ventaRepository.find({
-            where: { estado: venta_entity_1.VentaEstado.PENDIENTE },
+            where: {
+                clienteNombre: (0, typeorm_2.Not)((0, typeorm_2.IsNull)())
+            },
             relations: ['items', 'items.articulo', 'cliente'],
             order: { fechaHora: 'ASC' },
         });
@@ -2482,7 +2585,7 @@ exports.VentasService = VentasService = VentasService_1 = __decorate([
 
 
 /***/ }),
-/* 44 */
+/* 45 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2502,9 +2605,9 @@ var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VentasController = void 0;
 const common_1 = __webpack_require__(3);
-const ventas_service_1 = __webpack_require__(43);
-const venta_dto_1 = __webpack_require__(45);
-const pagar_cuenta_dto_1 = __webpack_require__(46);
+const ventas_service_1 = __webpack_require__(44);
+const venta_dto_1 = __webpack_require__(46);
+const pagar_cuenta_dto_1 = __webpack_require__(47);
 let VentasController = class VentasController {
     ventasService;
     constructor(ventasService) {
@@ -2601,7 +2704,7 @@ exports.VentasController = VentasController = __decorate([
 
 
 /***/ }),
-/* 45 */
+/* 46 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2623,6 +2726,7 @@ const venta_entity_1 = __webpack_require__(16);
 class CreateVentaItemDto {
     articuloId;
     cantidad;
+    subtotalPersonalizado;
 }
 exports.CreateVentaItemDto = CreateVentaItemDto;
 __decorate([
@@ -2632,9 +2736,15 @@ __decorate([
 ], CreateVentaItemDto.prototype, "articuloId", void 0);
 __decorate([
     (0, class_validator_1.IsNumber)(),
-    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.Min)(0.001),
     __metadata("design:type", Number)
 ], CreateVentaItemDto.prototype, "cantidad", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], CreateVentaItemDto.prototype, "subtotalPersonalizado", void 0);
 class CreateVentaDto {
     clienteId;
     clienteNombre;
@@ -2696,7 +2806,7 @@ __decorate([
 
 
 /***/ }),
-/* 46 */
+/* 47 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2748,7 +2858,7 @@ __decorate([
 
 
 /***/ }),
-/* 47 */
+/* 48 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2762,9 +2872,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ClientesModule = void 0;
 const common_1 = __webpack_require__(3);
 const typeorm_1 = __webpack_require__(5);
-const clientes_service_1 = __webpack_require__(48);
+const clientes_service_1 = __webpack_require__(49);
 const cliente_entity_1 = __webpack_require__(17);
-const clientes_controller_1 = __webpack_require__(49);
+const clientes_controller_1 = __webpack_require__(50);
 let ClientesModule = class ClientesModule {
 };
 exports.ClientesModule = ClientesModule;
@@ -2779,7 +2889,7 @@ exports.ClientesModule = ClientesModule = __decorate([
 
 
 /***/ }),
-/* 48 */
+/* 49 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2848,7 +2958,7 @@ exports.ClientesService = ClientesService = __decorate([
 
 
 /***/ }),
-/* 49 */
+/* 50 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2868,9 +2978,9 @@ var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ClientesController = void 0;
 const common_1 = __webpack_require__(3);
-const clientes_service_1 = __webpack_require__(48);
-const create_cliente_dto_1 = __webpack_require__(50);
-const update_cliente_dto_1 = __webpack_require__(51);
+const clientes_service_1 = __webpack_require__(49);
+const create_cliente_dto_1 = __webpack_require__(51);
+const update_cliente_dto_1 = __webpack_require__(52);
 let ClientesController = class ClientesController {
     clientesService;
     constructor(clientesService) {
@@ -2935,7 +3045,7 @@ exports.ClientesController = ClientesController = __decorate([
 
 
 /***/ }),
-/* 50 */
+/* 51 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2988,21 +3098,21 @@ __decorate([
 
 
 /***/ }),
-/* 51 */
+/* 52 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateClienteDto = void 0;
 const mapped_types_1 = __webpack_require__(32);
-const create_cliente_dto_1 = __webpack_require__(50);
+const create_cliente_dto_1 = __webpack_require__(51);
 class UpdateClienteDto extends (0, mapped_types_1.PartialType)(create_cliente_dto_1.CreateClienteDto) {
 }
 exports.UpdateClienteDto = UpdateClienteDto;
 
 
 /***/ }),
-/* 52 */
+/* 53 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3016,8 +3126,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RetirosModule = void 0;
 const common_1 = __webpack_require__(3);
 const typeorm_1 = __webpack_require__(5);
-const retiros_service_1 = __webpack_require__(53);
-const retiros_controller_1 = __webpack_require__(54);
+const retiros_service_1 = __webpack_require__(54);
+const retiros_controller_1 = __webpack_require__(55);
 const retiro_entity_1 = __webpack_require__(18);
 let RetirosModule = class RetirosModule {
 };
@@ -3032,7 +3142,7 @@ exports.RetirosModule = RetirosModule = __decorate([
 
 
 /***/ }),
-/* 53 */
+/* 54 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3096,7 +3206,7 @@ exports.RetirosService = RetirosService = RetirosService_1 = __decorate([
 
 
 /***/ }),
-/* 54 */
+/* 55 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3116,8 +3226,8 @@ var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RetirosController = void 0;
 const common_1 = __webpack_require__(3);
-const retiros_service_1 = __webpack_require__(53);
-const create_retiro_dto_1 = __webpack_require__(55);
+const retiros_service_1 = __webpack_require__(54);
+const create_retiro_dto_1 = __webpack_require__(56);
 let RetirosController = class RetirosController {
     retirosService;
     constructor(retirosService) {
@@ -3152,7 +3262,7 @@ exports.RetirosController = RetirosController = __decorate([
 
 
 /***/ }),
-/* 55 */
+/* 56 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3171,6 +3281,7 @@ const class_validator_1 = __webpack_require__(25);
 class CreateRetiroDto {
     monto;
     motivo;
+    formaPago;
 }
 exports.CreateRetiroDto = CreateRetiroDto;
 __decorate([
@@ -3183,10 +3294,15 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)({ message: 'El motivo es obligatorio' }),
     __metadata("design:type", String)
 ], CreateRetiroDto.prototype, "motivo", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)({ message: 'La forma de pago es obligatoria' }),
+    __metadata("design:type", String)
+], CreateRetiroDto.prototype, "formaPago", void 0);
 
 
 /***/ }),
-/* 56 */
+/* 57 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3200,8 +3316,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MarcasModule = void 0;
 const common_1 = __webpack_require__(3);
 const typeorm_1 = __webpack_require__(5);
-const marcas_service_1 = __webpack_require__(57);
-const marcas_controller_1 = __webpack_require__(58);
+const marcas_service_1 = __webpack_require__(58);
+const marcas_controller_1 = __webpack_require__(59);
 const marca_entity_1 = __webpack_require__(11);
 let MarcasModule = class MarcasModule {
 };
@@ -3216,7 +3332,7 @@ exports.MarcasModule = MarcasModule = __decorate([
 
 
 /***/ }),
-/* 57 */
+/* 58 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3268,7 +3384,7 @@ exports.MarcasService = MarcasService = __decorate([
 
 
 /***/ }),
-/* 58 */
+/* 59 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3288,8 +3404,8 @@ var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MarcasController = void 0;
 const common_1 = __webpack_require__(3);
-const marcas_service_1 = __webpack_require__(57);
-const create_marca_dto_1 = __webpack_require__(59);
+const marcas_service_1 = __webpack_require__(58);
+const create_marca_dto_1 = __webpack_require__(60);
 let MarcasController = class MarcasController {
     marcasService;
     constructor(marcasService) {
@@ -3333,7 +3449,7 @@ exports.MarcasController = MarcasController = __decorate([
 
 
 /***/ }),
-/* 59 */
+/* 60 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3362,7 +3478,7 @@ __decorate([
 
 
 /***/ }),
-/* 60 */
+/* 61 */
 /***/ ((module) => {
 
 module.exports = require("child_process");
@@ -3404,7 +3520,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core_1 = __webpack_require__(1);
 const app_module_1 = __webpack_require__(2);
 const common_1 = __webpack_require__(3);
-const child_process_1 = __webpack_require__(60);
+const child_process_1 = __webpack_require__(61);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.enableCors({

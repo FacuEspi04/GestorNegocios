@@ -1,13 +1,13 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsInt, IsNotEmpty, IsOptional, IsPositive, IsNumber, Min, IsString, ValidateNested } from 'class-validator';
 
 class CreatePedidoItemDto {
   @IsInt()
   @IsPositive()
   articuloId: number;
 
-  @IsInt()
-  @IsPositive()
+  @IsNumber()
+  @Min(0.001)
   cantidad: number;
 }
 

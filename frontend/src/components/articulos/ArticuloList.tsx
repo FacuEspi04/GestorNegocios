@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { formatearMoneda } from '../../utils/formatters';
 import {
   Table,
   Card,
@@ -210,7 +211,7 @@ const ArticuloList: React.FC = () => {
                         )}
                       </td>
                       <td>{articulo.stock_minimo}</td>
-                      <td className="font-medium">${Number(articulo.precio).toFixed(2)}</td>
+                        <td className="font-medium">{formatearMoneda(articulo.precio)}</td>
                       <td className="text-center">
                         <div className="flex gap-1.5 justify-center">
                           <Button
@@ -269,7 +270,7 @@ const ArticuloList: React.FC = () => {
                 )}
                 Código: <code>{articuloAEliminar.codigo_barras}</code>
                 <br />
-                Precio: ${Number(articuloAEliminar.precio).toFixed(2)}
+                  Precio: {formatearMoneda(articuloAEliminar.precio)}
               </div>
               <p className="text-danger">
                 <strong>Esta acción no se puede deshacer.</strong>

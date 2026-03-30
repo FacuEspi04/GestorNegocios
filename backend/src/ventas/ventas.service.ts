@@ -8,6 +8,9 @@ import {
   Repository,
   FindOptionsWhere,
   Between,
+  Not,
+  IsNull,
+  In
 } from 'typeorm';
 import { CreateVentaDto, RegistrarPagoDto } from './dto/venta.dto';
 import { PagarCuentaDto } from './dto/pagar-cuenta.dto'; 
@@ -77,7 +80,10 @@ export class VentasService {
         await queryRunner.manager.save(Articulo, articulo);
 
         const precioUnitario = Number(articulo.precio);
-        const subtotalItem = precioUnitario * itemDto.cantidad;
+        const subtotalItem =
+          itemDto.subtotalPersonalizado !== undefined
+            ? Number(itemDto.subtotalPersonalizado)
+            : precioUnitario * itemDto.cantidad;
         subtotalVenta += subtotalItem;
 
         const detalle = new VentaDetalle();
@@ -155,11 +161,13 @@ export class VentasService {
   }
 
   /**
-   * Busca todas las ventas con estado "Pendiente" (Cuentas Corrientes).
+   * Busca todas las interacciones de cuentas corrientes
    */
   async findPendientes(): Promise<Venta[]> {
     return this.ventaRepository.find({
-      where: { estado: VentaEstado.PENDIENTE },
+      where: {
+        clienteNombre: Not(IsNull())
+      },
       relations: ['items', 'items.articulo', 'cliente'],
       order: { fechaHora: 'ASC' },
     });

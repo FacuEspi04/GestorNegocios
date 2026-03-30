@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Package, ClipboardList, ShoppingCart } from "lucide-react";
-import logo from "../assets/dietSanJose.png";
 const Inicio: React.FC = () => {
   const navigate = useNavigate();
 
@@ -17,7 +16,7 @@ const Inicio: React.FC = () => {
   const cards = [
     {
       title: "Artículos",
-      desc: "Gestiona tu inventario de productos dietéticos y naturales.",
+      desc: "Gestiona tu inventario de productos.",
       icon: <Package size={28} className="text-white" />,
       bg: "bg-blue-500/10",
       iconBg: "bg-blue-500",
@@ -44,14 +43,8 @@ const Inicio: React.FC = () => {
   return (
     <div style={{ height: "calc(100vh - 80px)", overflow: "hidden" }} className="d-flex flex-column align-items-center pt-4 px-3">
       <div className="flex flex-col items-center mb-4">
-        <img
-          src={logo}
-          alt="Dietética San José"
-          className="object-contain mb-2"
-          style={{ height: "80px" }}
-        />
         <h2 className="text-2xl font-bold text-slate-900 mb-1">
-          Bienvenido a Dietética San José
+          Gestor de negocios
         </h2>
         <p className="text-slate-500 text-sm mt-0">
           Selecciona una sección para comenzar

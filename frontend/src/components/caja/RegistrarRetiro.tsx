@@ -12,11 +12,13 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Wallet } from 'lucide-react';
 import { createRetiro, type CreateRetiroDto } from '../../services/apiService';
+import { formatearPrecioInput, parsePrecioInput } from '../../utils/formatters';
 
 // Interfaz para el estado del formulario
 interface RetiroForm {
   monto: string;
   motivo: string;
+  formaPago: string;
 }
 
 const RegistrarRetiro: React.FC = () => {
@@ -28,12 +30,20 @@ const RegistrarRetiro: React.FC = () => {
   const [formData, setFormData] = useState<RetiroForm>({
     monto: '',
     motivo: '',
+    formaPago: 'Efectivo',
   });
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
+    if (name === 'monto') {
+      setFormData({
+        ...formData,
+        monto: formatearPrecioInput(value),
+      });
+      return;
+    }
     setFormData({
       ...formData,
       [name]: value,
@@ -41,12 +51,16 @@ const RegistrarRetiro: React.FC = () => {
   };
 
   const validarFormulario = (): boolean => {
-    if (!formData.monto || parseFloat(formData.monto) <= 0) {
+    if (!formData.monto || parsePrecioInput(formData.monto) <= 0) {
       setError('El monto debe ser un número mayor a 0');
       return false;
     }
     if (!formData.motivo.trim()) {
       setError('El motivo del retiro es obligatorio');
+      return false;
+    }
+    if (!formData.formaPago) {
+      setError('La forma de pago es obligatoria');
       return false;
     }
     return true;
@@ -65,8 +79,9 @@ const RegistrarRetiro: React.FC = () => {
 
     // Preparar DTO para la API
     const nuevoRetiro: CreateRetiroDto = {
-      monto: parseFloat(formData.monto),
+      monto: parsePrecioInput(formData.monto),
       motivo: formData.motivo.trim(),
+      formaPago: formData.formaPago,
     };
 
     try {
@@ -135,13 +150,12 @@ const RegistrarRetiro: React.FC = () => {
                     <InputGroup>
                       <InputGroup.Text>$</InputGroup.Text>
                       <Form.Control
-                        type="number"
+                        type="text"
                         name="monto"
                         value={formData.monto}
                         onChange={handleChange}
-                        placeholder="0.00"
-                        step="0.01"
-                        min="0.01"
+                        placeholder="0,00"
+                        inputMode="decimal"
                         required
                         autoFocus
                       />
@@ -161,6 +175,27 @@ const RegistrarRetiro: React.FC = () => {
                       placeholder="Ej: Pago a proveedor, compra de insumos..."
                       required
                     />
+                  </Form.Group>
+                </Col>
+                <Col md={12}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>
+                      Forma de Pago <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Select
+                      name="formaPago"
+                      value={formData.formaPago}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="Efectivo">Efectivo</option>
+                      <option value="Transferencia">Transferencia</option>
+                      <option value="Débito">Tarjeta de Débito</option>
+                      <option value="Crédito">Tarjeta de Crédito</option>
+                      <option value="Mercado Pago">Mercado Pago</option>
+                      <option value="Cuenta Corriente">Cuenta Corriente</option>
+                      <option value="Otro">Otro</option>
+                    </Form.Select>
                   </Form.Group>
                 </Col>
               </Row>

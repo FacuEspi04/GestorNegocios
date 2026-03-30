@@ -30,7 +30,7 @@ export class VentaDetalle {
   @JoinColumn({ name: 'articulo_id' })
   articulo: Articulo;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'decimal', precision: 10, scale: 3 })
   cantidad: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })

@@ -3,6 +3,8 @@ import {
   Card,
   Table,
   Button,
+  Row,
+  Col,
   Modal,
   Form,
   Alert,
@@ -25,7 +27,7 @@ import {
   type CreateClienteDto
 } from "../../services/apiService";
 import { useNavigate } from "react-router-dom";
-import { formatearMoneda } from "../../utils/formatters";
+import { formatearMoneda, formatearPeso, formatearPrecioInput, parsePrecioInput } from "../../utils/formatters";
 
 const CuentasCorrientes: React.FC = () => {
   const navigate = useNavigate();
@@ -93,10 +95,15 @@ const CuentasCorrientes: React.FC = () => {
     }
   };
 
+  const ventasPendientesFiltradas = ventasPendientes.filter((venta) => {
+    if (!venta.clienteId) return false;
+    return clientes.some((cliente) => cliente.id === venta.clienteId);
+  });
+
   // Agrupar por cliente
-  const ventasPorCliente = ventasPendientes.reduce(
+  const ventasPorCliente = ventasPendientesFiltradas.reduce(
     (acc, venta) => {
-      const clienteKey = venta.clienteNombre || "Cliente General";
+      const clienteKey = venta.clienteNombre || "Cliente";
       if (!acc[clienteKey]) {
         acc[clienteKey] = [];
       }
@@ -133,7 +140,7 @@ const CuentasCorrientes: React.FC = () => {
   const handleRegistrarPago = async () => {
     if (!clienteSeleccionado || !montoPago || !fechaPago) return;
 
-    const montoNumerico = parseFloat(montoPago);
+    const montoNumerico = parsePrecioInput(montoPago);
     
     if (isNaN(montoNumerico) || montoNumerico <= 0) {
       setError("Por favor ingrese un monto válido mayor a 0.");
@@ -159,7 +166,7 @@ const CuentasCorrientes: React.FC = () => {
       });
 
       setShowModal(false);
-      setExito(`¡Pago de $${montoNumerico} registrado correctamente para ${clienteSeleccionado}!`);
+      setExito(`¡Pago de ${formatearMoneda(montoNumerico)} registrado correctamente para ${clienteSeleccionado}!`);
       
       await cargarDatos();
 
@@ -294,7 +301,7 @@ const CuentasCorrientes: React.FC = () => {
                     </div>
                     <div className="d-flex align-items-center gap-3">
                         <span className="fs-5 badge bg-danger text-white">
-                            Deuda Total: ${calcularDeudaCliente(cliente).toFixed(2)}
+                            Deuda Total: {formatearMoneda(calcularDeudaCliente(cliente))}
                         </span>
                         <Button 
                             variant="success" 
@@ -311,9 +318,10 @@ const CuentasCorrientes: React.FC = () => {
                     <Table striped bordered hover responsive size="sm" className="mb-0">
                       <thead className="table-header-brand">
                         <tr>
-                          <th>Fecha</th>
+                          <th>Fecha y Hora</th>
+                          <th>Medio de Pago</th>
                           <th>Detalle</th>
-                          <th className="text-end">Estado Deuda</th>
+                          <th className="text-end">Monto/Estado</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -321,27 +329,42 @@ const CuentasCorrientes: React.FC = () => {
                             const total = Number(venta.total);
                             const pagado = Number(venta.monto_pagado || 0);
                             const resta = total - pagado;
+                            const isRecibo = venta.estado === 'Completada' && (!venta.items || venta.items.length === 0);
                             
                             return (
-                              <tr key={venta.id}>
-                                <td>{formatearFecha(venta.fechaHora)} {formatearHora(venta.fechaHora)}</td>
+                              <tr key={venta.id} className={isRecibo ? 'table-success' : 'table-danger'}>
                                 <td>
-                                  <small className="text-muted">
-                                    {venta.items.map((i) => `${i.articulo?.nombre || 'Art.'} (x${i.cantidad})`).join(", ")}
-                                  </small>
+                                    {formatearFecha(venta.fechaHora)}<br/>
+                                    <small className="text-muted">{formatearHora(venta.fechaHora)}</small>
+                                </td>
+                                <td className="align-middle">
+                                    <span className="badge bg-secondary">
+                                      {venta.formaPago ? venta.formaPago.toUpperCase() : "CUENTA CORRIENTE"}
+                                    </span>
+                                </td>
+                                <td>
+                                    {isRecibo ? (
+                                        <span className="text-success fw-bold">Entrega de dinero a favor</span>
+                                    ) : (
+                                        <small className="text-muted">
+                                            {venta.items.map((i) => `${i.articulo?.nombre || 'Art.'} (x${i.articulo?.esPesable ? formatearPeso(Number(i.cantidad)) : i.cantidad})`).join(", ")}
+                                        </small>
+                                    )}
                                 </td>
                                 <td className="text-end">
-                                    {pagado > 0 ? (
+                                    {isRecibo ? (
+                                        <div className="text-success fw-bold">+{formatearMoneda(pagado)}</div>
+                                    ) : pagado > 0 ? (
                                         <div>
                                             <span className="text-decoration-line-through text-muted" style={{fontSize: '0.85rem'}}>
-                                                Orig: ${total.toFixed(2)}
+                                                Orig: {formatearMoneda(total)}
                                             </span>
                                             <div className="text-danger fw-bold">
-                                                Restan: ${resta.toFixed(2)}
+                                                Restan: {formatearMoneda(resta)}
                                             </div>
                                         </div>
                                     ) : (
-                                        <span className="fw-bold text-danger">${total.toFixed(2)}</span>
+                                        <span className="fw-bold text-danger">{formatearMoneda(total)}</span>
                                     )}
                                 </td>
                               </tr>
@@ -414,74 +437,83 @@ const CuentasCorrientes: React.FC = () => {
         </Card.Body>
       </Card>
 
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+      <Modal
+        show={showModal}
+        onHide={() => setShowModal(false)}
+        centered
+        size="lg"
+        dialogClassName="modal-compact"
+      >
         <Modal.Header closeButton className="modal-header-brand">
           <Modal.Title>Registrar Pago: {clienteSeleccionado}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {error && <Alert variant="danger">{error}</Alert>}
-          
-          <div className="text-center mb-4 p-3 bg-light rounded">
-            <h6 className="text-muted text-uppercase mb-1">Deuda Actual</h6>
-            <h2 className="text-danger fw-bold">${deudaTotalCliente.toFixed(2)}</h2>
-          </div>
 
-          <Form>
-            {/* NUEVO CAMPO: FECHA DEL PAGO */}
-            <Form.Group className="mb-3">
-              <Form.Label><CalendarDays size={14} className="me-1"/> Fecha de ingreso en Caja</Form.Label>
-              <Form.Control 
-                type="date" 
-                value={fechaPago} 
-                onChange={(e) => setFechaPago(e.target.value)}
-                max={getTodayString()}
-              />
-              <Form.Text className="text-muted">
-                El dinero impactará en la caja de este día.
-              </Form.Text>
-            </Form.Group>
+          <Row className="g-3">
+            <Col md={5}>
+              <div className="text-center p-3 bg-light rounded mb-3">
+                <h6 className="text-muted text-uppercase mb-1">Deuda Actual</h6>
+                <h2 className="text-danger fw-bold">{formatearMoneda(deudaTotalCliente)}</h2>
+              </div>
 
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-bold">¿Cuánto entrega el cliente?</Form.Label>
-              <InputGroup size="lg">
-                <InputGroup.Text>$</InputGroup.Text>
+              <Form.Group className="mb-3">
+                <Form.Label><CalendarDays size={14} className="me-1"/> Fecha de ingreso en Caja</Form.Label>
                 <Form.Control
-                  type="number"
-                  placeholder="Ej: 10000"
-                  value={montoPago}
-                  onChange={(e) => setMontoPago(e.target.value)}
-                  autoFocus
+                  type="date"
+                  value={fechaPago}
+                  onChange={(e) => setFechaPago(e.target.value)}
+                  max={getTodayString()}
                 />
-              </InputGroup>
-              {montoPago && !isNaN(parseFloat(montoPago)) && (
+                <Form.Text className="text-muted">
+                  El dinero impactará en la caja de este día.
+                </Form.Text>
+              </Form.Group>
+            </Col>
+
+            <Col md={7}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-bold">¿Cuánto entrega el cliente?</Form.Label>
+                <InputGroup size="sm">
+                  <InputGroup.Text>$</InputGroup.Text>
+                  <Form.Control
+                    type="text"
+                    placeholder="Ej: 10.000"
+                    value={montoPago}
+                    onChange={(e) => setMontoPago(formatearPrecioInput(e.target.value))}
+                    inputMode="decimal"
+                    autoFocus
+                  />
+                </InputGroup>
+                {montoPago && !isNaN(parsePrecioInput(montoPago)) && (
                   <div className="mt-2 text-end">
-                      <small className="text-muted">
-                        Saldo restante: 
-                        <strong className={deudaTotalCliente - parseFloat(montoPago) > 0.01 ? "text-danger ms-1" : "text-success ms-1"}>
-                             ${Math.max(0, deudaTotalCliente - parseFloat(montoPago)).toFixed(2)}
-                        </strong>
-                      </small>
+                    <small className="text-muted">
+                      Saldo restante:
+                      <strong className={deudaTotalCliente - parsePrecioInput(montoPago) > 0.01 ? "text-danger ms-1" : "text-success ms-1"}>
+                        {formatearMoneda(Math.max(0, deudaTotalCliente - parsePrecioInput(montoPago)))}
+                      </strong>
+                    </small>
                   </div>
-              )}
-            </Form.Group>
+                )}
+              </Form.Group>
 
-            <Form.Group className="mb-3">
-              <Form.Label>Forma de Pago</Form.Label>
-              <Form.Select
-                value={formaPagoPago}
-                onChange={(e) => setFormaPagoPago(e.target.value as FormaPago)}
-              >
-                <option value="efectivo">Efectivo</option>
-                <option value="debito">Débito</option>
-                <option value="credito">Crédito</option>
-                <option value="transferencia">Transferencia</option>
-              </Form.Select>
-            </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Forma de Pago</Form.Label>
+                <Form.Select
+                  value={formaPagoPago}
+                  onChange={(e) => setFormaPagoPago(e.target.value as FormaPago)}
+                >
+                  <option value="efectivo">Efectivo</option>
+                  <option value="debito">Débito</option>
+                  <option value="credito">Crédito</option>
+                  <option value="transferencia">Transferencia</option>
+                </Form.Select>
+              </Form.Group>
 
-            {formaPagoPago === "credito" && (
-              <Form.Group className="mb-3 p-2 border rounded bg-light">
-                <Form.Label>Interés Tarjeta (%)</Form.Label>
-                <div className="d-flex gap-2 align-items-center">
+              {formaPagoPago === "credito" && (
+                <Form.Group className="mb-3 p-2 border rounded bg-light">
+                  <Form.Label>Interés Tarjeta (%)</Form.Label>
+                  <div className="d-flex gap-2 align-items-center">
                     <Form.Control
                       type="number"
                       value={interesPorcentajePago}
@@ -489,12 +521,13 @@ const CuentasCorrientes: React.FC = () => {
                       style={{width: '80px'}}
                     />
                     <span className="text-muted small">
-                        Se cobrarán <strong>${((parseFloat(montoPago)||0) * (parseFloat(interesPorcentajePago)||0)/100).toFixed(2)}</strong> extra de interés.
+                      Se cobrarán <strong>{formatearMoneda(((parsePrecioInput(montoPago)||0) * (parseFloat(interesPorcentajePago)||0)/100))}</strong> extra de interés.
                     </span>
-                </div>
-              </Form.Group>
-            )}
-          </Form>
+                  </div>
+                </Form.Group>
+              )}
+            </Col>
+          </Row>
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowModal(false)} disabled={isSubmitting}>
@@ -563,3 +596,5 @@ const CuentasCorrientes: React.FC = () => {
 };
 
 export default CuentasCorrientes;
+
+ 

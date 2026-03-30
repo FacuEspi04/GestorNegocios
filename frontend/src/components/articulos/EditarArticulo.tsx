@@ -23,6 +23,7 @@ import {
   type UpdateArticuloDto,
   updateArticulo,
 } from '../../services/apiService';
+import { formatearPrecioInput, parsePrecioInput } from '../../utils/formatters';
 
 interface ArticuloForm {
   nombre: string;
@@ -32,6 +33,7 @@ interface ArticuloForm {
   stock: string;
   stockMinimo: string;
   categoriaId: string;
+  esPesable: boolean;
 }
 
 const EditarArticulo: React.FC = () => {
@@ -62,6 +64,7 @@ const EditarArticulo: React.FC = () => {
     stock: '',
     stockMinimo: '',
     categoriaId: '',
+    esPesable: false,
   });
 
   useEffect(() => {
@@ -80,21 +83,27 @@ const EditarArticulo: React.FC = () => {
           getMarcas(),
         ]);
 
-        setFormData({
-          nombre: articuloData.nombre,
-          marcaId: String(articuloData.marca?.id || ''),
-          codigoBarras: articuloData.codigo_barras,
-          precio: String(articuloData.precio),
-          stock: String(articuloData.stock),
-          stockMinimo: String(articuloData.stock_minimo),
-          categoriaId: String(articuloData.categoria?.id || ''),
-        });
-        
         const categoriasOrdenadas = categoriasData.sort((a, b) => a.nombre.localeCompare(b.nombre));
         const marcasOrdenadas = marcasData.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
         setCategorias(categoriasOrdenadas);
         setMarcas(marcasOrdenadas);
+
+        // Buscar marca "Otros" si el articulo no tuviera marca
+        const marcaOtros = marcasOrdenadas.find(
+          (m) => m.nombre.toLowerCase() === 'otros' || m.nombre.toLowerCase() === 'otra'
+        );
+
+        setFormData({
+          nombre: articuloData.nombre,
+          marcaId: String(articuloData.marca?.id || marcaOtros?.id || ''),
+          codigoBarras: articuloData.codigo_barras,
+          precio: formatearPrecioInput(articuloData.precio),
+          stock: String(articuloData.stock),
+          stockMinimo: String(articuloData.stock_minimo),
+          esPesable: articuloData.esPesable || false,
+          categoriaId: String(articuloData.categoria?.id || ''),
+        });
       } catch (err: any) {
         console.error('Error al cargar datos:', err);
         setError(err.message || 'No se pudieron cargar los datos.');
@@ -137,7 +146,9 @@ const EditarArticulo: React.FC = () => {
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
   ) => {
-    const { name, value } = e.target;
+    const target = e.target as HTMLInputElement;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const name = target.name;
 
     if (name === 'marcaId' && value === 'NUEVA_MARCA') {
       setShowMarcaModal(true);
@@ -147,6 +158,11 @@ const EditarArticulo: React.FC = () => {
       setShowCategoriaModal(true);
       setErrorCategoria('');
       setNewCategoriaName('');
+    } else if (name === 'precio') {
+      setFormData({
+        ...formData,
+        [name]: formatearPrecioInput(value as string),
+      });
     } else {
       setFormData({
         ...formData,
@@ -160,15 +176,15 @@ const EditarArticulo: React.FC = () => {
       setError('El nombre del artículo es obligatorio');
       return false;
     }
-    if (!formData.precio || parseFloat(formData.precio) <= 0) {
+    if (!formData.precio || parsePrecioInput(formData.precio) <= 0) {
       setError('El precio debe ser mayor a 0');
       return false;
     }
-    if (!formData.stock || parseInt(formData.stock) < 0) {
+    if (!formData.stock || parseFloat(formData.stock) < 0) {
       setError('El stock no puede ser negativo');
       return false;
     }
-    if (!formData.stockMinimo || parseInt(formData.stockMinimo) < 0) {
+    if (!formData.stockMinimo || parseFloat(formData.stockMinimo) < 0) {
       setError('El stock mínimo no puede ser negativo');
       return false;
     }
@@ -249,9 +265,10 @@ const EditarArticulo: React.FC = () => {
       nombre: formData.nombre.trim(),
       marcaId: parseInt(formData.marcaId, 10),
       codigo_barras: formData.codigoBarras, // Ahora se envía el código editado
-      precio: parseFloat(formData.precio),
-      stock: parseInt(formData.stock, 10),
-      stock_minimo: parseInt(formData.stockMinimo, 10),
+      precio: parsePrecioInput(formData.precio),
+      stock: parseFloat(formData.stock),
+      stock_minimo: parseFloat(formData.stockMinimo),
+      esPesable: formData.esPesable,
       categoriaId: parseInt(formData.categoriaId, 10),
     };
 
@@ -356,6 +373,24 @@ const EditarArticulo: React.FC = () => {
                 </Col>
               </Row>
 
+              <Row className="mb-3">
+                <Col md={12}>
+                  <Form.Check
+                    type="switch"
+                    id="esPesable"
+                    name="esPesable"
+                    label="Este artículo se vende por peso (Granel/Kg)"
+                    checked={formData.esPesable}
+                    onChange={handleChange}
+                  />
+                  {formData.esPesable && (
+                    <Form.Text className="text-muted text-primary mt-1">
+                      El precio base debe ser por 1 Kg. El stock se medirá en Kilos.
+                    </Form.Text>
+                  )}
+                </Col>
+              </Row>
+
               <Row>
                 <Col md={4}>
                   <Form.Group className="mb-3">
@@ -365,12 +400,11 @@ const EditarArticulo: React.FC = () => {
                     <InputGroup>
                       <InputGroup.Text>$</InputGroup.Text>
                       <Form.Control
-                        type="number"
+                        type="text"
                         name="precio"
                         value={formData.precio}
                         onChange={handleChange}
-                        step="0.01"
-                        min="0"
+                        placeholder="0,00"
                         required
                       />
                     </InputGroup>
@@ -383,6 +417,7 @@ const EditarArticulo: React.FC = () => {
                     </Form.Label>
                     <Form.Control
                       type="number"
+                      step={formData.esPesable ? "0.001" : "1"}
                       name="stock"
                       value={formData.stock}
                       onChange={handleChange}
@@ -398,6 +433,7 @@ const EditarArticulo: React.FC = () => {
                     </Form.Label>
                     <Form.Control
                       type="number"
+                      step={formData.esPesable ? "0.001" : "1"}
                       name="stockMinimo"
                       value={formData.stockMinimo}
                       onChange={handleChange}
@@ -592,3 +628,4 @@ const EditarArticulo: React.FC = () => {
 };
 
 export default EditarArticulo;
+

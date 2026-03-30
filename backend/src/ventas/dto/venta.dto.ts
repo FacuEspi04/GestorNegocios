@@ -21,8 +21,13 @@ export class CreateVentaItemDto {
   articuloId: number;
 
   @IsNumber()
-  @Min(1)
+  @Min(0.001) // Permite valores como 0.100 kg
   cantidad: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  subtotalPersonalizado?: number;
 }
 
 // --- DTO para crear una nueva venta ---

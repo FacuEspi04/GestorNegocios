@@ -6,6 +6,7 @@ import {
   IsString,
   IsNumber,
   Min,
+  IsBoolean,
 } from 'class-validator';
 
 export class UpdateArticuloDto {
@@ -25,15 +26,19 @@ export class UpdateArticuloDto {
   @IsOptional()
   precio?: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(0)
   @IsOptional()
   stock?: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(0)
   @IsOptional()
   stock_minimo?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  esPesable?: boolean;
 
   // -----------------------------------------
 

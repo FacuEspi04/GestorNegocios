@@ -14,7 +14,7 @@ export class PedidoDetalle {
   @Column({ name: 'articulo_id', type: 'integer' }) // <-- CAMBIO: 'bigint' a 'integer' y quitado "unsigned"
   articuloId: number;
 
-  @Column()
+  @Column({ type: 'decimal', precision: 10, scale: 3 })
   cantidad: number;
 
   // Guardamos el precio de costo (o de venta, según tu front) al momento del pedido

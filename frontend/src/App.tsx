@@ -15,7 +15,7 @@ import CrearPedido from './components/proveedores/CrearPedido';
 import ListaPedidos from './components/proveedores/ListaPedidos';
 
 import RegistrarRetiro from './components/caja/RegistrarRetiro';
-import EditarProveedor from './components/proveedores/EditarProveedor';
+
 
 function App() {
   return (
@@ -39,11 +39,9 @@ function App() {
           {/* Rutas de proveedores */}
           <Route path="proveedores" element={<ProveedoresList />} />
           <Route path="proveedores/nuevo" element={<AgregarProveedor />} />
-          <Route path="proveedores/pedidos/nuevo" element={<CrearPedido />} />
           <Route path="proveedores/pedidos/lista" element={<ListaPedidos />} />
-          <Route path="proveedores/editar/:id" element={<EditarProveedor />} />
-
-          {/* Rutas de ventas */}
+          <Route path="proveedores/pedidos/nuevo" element={<CrearPedido />} />
+    <Route path="proveedores/pedidos/editar/:id" element={<CrearPedido />} />
           <Route path="ventas" element={<VentasList />} />
           <Route path="ventas/nueva" element={<RegistrarVenta />} />
           <Route path="ventas/cuentas-corrientes" element={<CuentasCorrientes />} />

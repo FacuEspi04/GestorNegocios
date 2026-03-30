@@ -5,6 +5,7 @@ import {
   Min,
   IsOptional,
   IsInt,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateArticuloDto {
@@ -25,13 +26,17 @@ export class CreateArticuloDto {
   @Min(0)
   precio: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(0)
   stock: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(0)
   stock_minimo: number;
+
+  @IsOptional()
+  @IsBoolean()
+  esPesable?: boolean;
 
   @IsInt()
   categoriaId: number;

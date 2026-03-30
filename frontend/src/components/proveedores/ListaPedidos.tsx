@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { formatearMoneda } from "../../utils/formatters";
 import {
   Card,
   Table,
@@ -14,6 +15,7 @@ import { Trash2, FileDown, PlusCircle, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { formatearPeso } from "../../utils/formatters";
 import {
   type Pedido,
   type Proveedor,
@@ -123,6 +125,24 @@ const ListaPedidos: React.FC = () => {
   // --- Fin Funciones de Eliminación ---
 
   // --- 2. FUNCIÓN DE IMPRESIÓN REEMPLAZADA POR JSPDF ---
+  const addPDFHeader = (doc: jsPDF, title: string, rightText: string) => {
+    const margin = 14;
+    doc.setFillColor(30, 41, 59);
+    doc.rect(0, 0, doc.internal.pageSize.width, 26, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text(title, margin, 17);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const textWidth = doc.getTextWidth(rightText);
+    doc.text(rightText, doc.internal.pageSize.width - margin - textWidth, 17);
+
+    doc.setTextColor(50, 50, 50);
+  };
+
   const imprimirPedido = (pedido: PedidoGuardado) => {
     const doc = new jsPDF();
     const margin = 14;
@@ -130,12 +150,9 @@ const ListaPedidos: React.FC = () => {
       "es-AR",
     );
 
-    // Título
-    doc.setFontSize(18);
-    doc.text(`Pedido a Proveedor`, margin, 22);
+    addPDFHeader(doc, "Pedido a Proveedor", `Fecha: ${fechaFormateada}`);
+
     doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Fecha Pedido: ${fechaFormateada}`, margin, 28);
     doc.text(`Estado: ${pedido.estado}`, margin, 34);
 
     // Sección Proveedor
@@ -177,10 +194,21 @@ const ListaPedidos: React.FC = () => {
 
     autoTable(doc, {
       startY: startY + 4,
-      head: [["Artículo", "Cantidad Pedida"]],
-      body: pedido.items.map((i) => [i.articulo.nombre, i.cantidad]),
+      head: [["Artículo", "Cantidad", "P. Unit", "Subtotal"]],
+      body: pedido.items.map((i) => {
+        const cantidadTxt = i.articulo.esPesable ? formatearPeso(i.cantidad) : i.cantidad;
+        const precioUnitario = Number(i.precioUnitario);
+        const subtotal = Number(i.subtotal);
+        return [
+          i.articulo.nombre,
+          cantidadTxt,
+          Number.isFinite(precioUnitario) ? formatearMoneda(precioUnitario) : "-",
+          Number.isFinite(subtotal) ? formatearMoneda(subtotal) : "-",
+        ];
+      }),
       theme: "striped",
-      headStyles: { fillColor: [143, 61, 56] }, // Color principal
+      headStyles: { fillColor: [30, 41, 59] }, // Color principal
+      columnStyles: { 2: { halign: "right" }, 3: { halign: "right" } },
     });
 
     // Guardar el archivo
@@ -293,7 +321,7 @@ const ListaPedidos: React.FC = () => {
                       </td>
                       <td>{pedido.proveedor.nombre}</td>
                       <td>{pedido.items.length}</td>
-                      <td>${Number(pedido.total).toFixed(2)}</td>
+                      <td>{formatearMoneda(pedido.total)}</td>
                       {/* --- 4. CELDAS DE ACCIÓN ACTUALIZADAS CON ÍCONOS --- */}
                       <td style={{ width: "70px" }}>
                         <Button
@@ -308,6 +336,18 @@ const ListaPedidos: React.FC = () => {
                           Ver
                         </Button>
                       </td>
+                      {pedido.estado === "Borrador" && (
+                        <td style={{ width: "70px" }}>
+                          <Button
+                            variant="success"
+                            size="sm"
+                            className="w-100"
+                            onClick={() => navigate(`/proveedores/pedidos/editar/${pedido.id}`)}
+                          >
+                            Editar
+                          </Button>
+                        </td>
+                      )}
                       <td style={{ width: "70px" }}>
                         <Button
                           variant="warning"
@@ -382,7 +422,7 @@ const ListaPedidos: React.FC = () => {
                     <ul>
                       {pedidoDetalle.items.map((i) => (
                         <li key={i.id}>
-                          {i.articulo.nombre} x{i.cantidad}
+                          {i.articulo.nombre} {i.articulo.esPesable ? "x " : "x"}{i.articulo.esPesable ? formatearPeso(i.cantidad) : i.cantidad}
                         </li>
                       ))}
                     </ul>
@@ -440,7 +480,7 @@ const ListaPedidos: React.FC = () => {
                     )}
                     <br />
                     <strong>Total:</strong> $
-                    {Number(pedidoAEliminar.total).toFixed(2)}
+                    {formatearMoneda(pedidoAEliminar.total)}
                     <br />
                     <strong>Items:</strong> {pedidoAEliminar.items.length}
                   </div>

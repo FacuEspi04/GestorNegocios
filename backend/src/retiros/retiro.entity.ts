@@ -22,6 +22,9 @@ export class Retiro {
   @Column({ type: 'text' })
   motivo: string;
 
+  @Column({ type: 'varchar', length: 50, default: 'Efectivo' })
+  formaPago: string;
+
   @Column({
     // type: 'enum', <-- LÍNEA ELIMINADA (no soportado por SQLite)
     type: 'varchar', // <-- LÍNEA AÑADIDA (para que SQLite sepa que es texto)

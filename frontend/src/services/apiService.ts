@@ -52,6 +52,7 @@ export interface Articulo {
   precio: string | number;
   stock: number;
   stock_minimo: number;
+  esPesable: boolean; // <-- AÑADIDO: Venta por peso
   categoria: Categoria | null; // <-- CORREGIDO: Acepta null
   activo: boolean;
   createdAt: Date;
@@ -65,6 +66,7 @@ export interface CreateArticuloDto {
   precio: number;
   stock: number;
   stock_minimo: number;
+  esPesable?: boolean; // <-- AÑADIDO: Venta por peso
   categoriaId: number;
 }
 
@@ -127,6 +129,7 @@ export interface CreatePedidoItemDto {
 export interface CreatePedidoDto {
   proveedorId: number;
   notas?: string;
+  estado?: string;
   items: CreatePedidoItemDto[];
 }
 
@@ -166,6 +169,7 @@ export interface Venta {
 export interface CreateVentaItemDto {
   articuloId: number;
   cantidad: number;
+  subtotalPersonalizado?: number;
 }
 
 export interface CreateVentaDto {
@@ -189,12 +193,14 @@ export interface Retiro {
   fechaHora: Date;
   monto: number;
   motivo: string;
+  formaPago: string;
   turno: 'mañana' | 'tarde' | 'fuera';
 }
 
 export interface CreateRetiroDto {
   monto: number;
   motivo: string;
+  formaPago: string;
 } 
 
 // --- Servicios de Artículos ---
@@ -478,6 +484,27 @@ export const createPedido = async (
       throw new Error(error.message.join(', '));
     }
     throw new Error('Error al crear el pedido');
+  }
+  return await response.json();
+};
+
+export const updatePedido = async (
+  id: number,
+  pedidoData: Partial<CreatePedidoDto>,
+): Promise<Pedido> => {
+  const response = await fetch(`${API_URL}/pedidos/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(pedidoData),
+  });
+  if (!response.ok) {
+    if (response.status === 400) {
+      const error = await response.json();
+      throw new Error(
+        Array.isArray(error.message) ? error.message.join(', ') : error.message
+      );
+    }
+    throw new Error('Error al actualizar el pedido');
   }
   return await response.json();
 };

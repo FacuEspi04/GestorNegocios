@@ -29,11 +29,14 @@ export class Articulo {
   @Column({ type: 'decimal', precision: 10, scale: 2 }) // 
   precio: number;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'decimal', precision: 10, scale: 3, default: 0 })
   stock: number;
 
-  @Column({ name: 'stock_minimo', type: 'int', default: 0 })
+  @Column({ name: 'stock_minimo', type: 'decimal', precision: 10, scale: 3, default: 0 })
   stock_minimo: number;
+
+  @Column({ name: 'es_pesable', type: 'boolean', default: false })
+  esPesable: boolean;
 
   // --- Relación con Categoría ---
   @Column({ name: 'categoria_id', type: 'integer', nullable: true }) // 

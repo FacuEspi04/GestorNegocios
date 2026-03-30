@@ -35,7 +35,7 @@ import {
 } from '../../services/apiService';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatearMoneda } from "../../utils/formatters";
+import { formatearMoneda, formatearPeso } from "../../utils/formatters";
 
 const VentasList: React.FC = () => {
   const navigate = useNavigate();
@@ -124,12 +124,18 @@ const VentasList: React.FC = () => {
 
   const { mañana: ventasMañana, tarde: ventasTarde } = ventasComputadas;
 
-  // Función auxiliar: Solo sumar si tiene FORMA DE PAGO (Evita sumar deudas viejas pagadas hoy)
+  const filtrarVentasCobradas = (listaVentas: Venta[]) => {
+    return listaVentas.filter(
+      (venta) => venta.estado === 'Completada' && !!venta.formaPago && Number(venta.monto_pagado || 0) > 0,
+    );
+  };
+
+  // Función auxiliar: Solo sumar ventas efectivamente cobradas
   const calcularRecaudadoPorFormaPago = (listaVentas: Venta[]) => {
     const totales: { [key: string]: number } = {
       'efectivo': 0, 'debito': 0, 'credito': 0, 'transferencia': 0,
     };
-    listaVentas.forEach((venta) => {
+    filtrarVentasCobradas(listaVentas).forEach((venta) => {
       const pagado = Number(venta.monto_pagado || 0);
       const formaPago = venta.formaPago;
       
@@ -140,16 +146,13 @@ const VentasList: React.FC = () => {
     return totales;
   };
 
-  const totalesPorFormaPago = useMemo(() => calcularRecaudadoPorFormaPago(ventas), [ventas]);
+  const totalesDia = useMemo(() => calcularRecaudadoPorFormaPago(ventas), [ventas]);
   const totalesMañana = useMemo(() => calcularRecaudadoPorFormaPago(ventasMañana), [ventasMañana]);
   const totalesTarde = useMemo(() => calcularRecaudadoPorFormaPago(ventasTarde), [ventasTarde]);
 
   const calcularTotalReal = (lista: Venta[]) => {
-    return lista.reduce((total, v) => {
-      if (v.formaPago) { // <--- Solo si es Efectivo, Débito, etc.
-        return total + Number(v.monto_pagado || 0);
-      }
-      return total;
+    return filtrarVentasCobradas(lista).reduce((total, v) => {
+      return total + Number(v.monto_pagado || 0);
     }, 0);
   };
 
@@ -161,6 +164,25 @@ const VentasList: React.FC = () => {
   const netoMañana = useMemo(() => totalRecaudadoMañana - totalRetirosMañana, [totalRecaudadoMañana, totalRetirosMañana]);
   const netoTarde = useMemo(() => totalRecaudadoTarde - totalRetirosTarde, [totalRecaudadoTarde, totalRetirosTarde]);
   const netoTotalDia = useMemo(() => totalRecaudadoDia - totalRetirosDelDia, [totalRecaudadoDia, totalRetirosDelDia]);
+
+  const clientesGenerales = useMemo(() => {
+    let contador = 0;
+    const mapa = new Map<number, string>();
+    ventas.forEach((venta) => {
+      const nombre = (venta.clienteNombre || '').trim() || 'Cliente General';
+      if (nombre === 'Cliente General') {
+        contador += 1;
+        mapa.set(venta.id, `Cliente General ${contador}`);
+      } else {
+        mapa.set(venta.id, nombre);
+      }
+    });
+    return mapa;
+  }, [ventas]);
+
+  const getNombreCliente = (venta: Venta) => {
+    return clientesGenerales.get(venta.id) || venta.clienteNombre || 'Cliente General';
+  };
 
   // --- FORMATO ---
   const formatearFecha = (fechaISO: string | Date): string => {
@@ -219,16 +241,16 @@ const VentasList: React.FC = () => {
   const getEstadoBadge = (venta: Venta) => {
     const total = Number(venta.total);
     const pagado = Number(venta.monto_pagado || 0);
-    if (venta.estado === 'Completada') return "success";
     if (pagado > 0 && pagado < total) return "warning";
+    if (venta.estado === 'Completada') return "success";
     return "danger";
   };
 
   const getTextoEstado = (venta: Venta) => {
     const total = Number(venta.total);
     const pagado = Number(venta.monto_pagado || 0);
+    if (pagado > 0 && pagado < total) return 'Parcial';
     if (venta.estado === 'Completada') return "Completada";
-    if (pagado > 0 && pagado < total) return `Parcial ($${pagado.toFixed(0)})`;
     return "Pendiente";
   };
 
@@ -242,9 +264,8 @@ const VentasList: React.FC = () => {
     return badges[formaPago] || "secondary";
   };
 
-  const formatearFormaPago = (formaPago: FormaPago | null, estado: VentaEstado) => {
-    if (estado === 'Pendiente' && !formaPago) return "Cta. Cte.";
-    if (!formaPago) return "N/A";
+  const formatearFormaPago = (formaPago: FormaPago | null, _estado: VentaEstado) => {
+    if (!formaPago) return "Cta. Cte.";
     switch (formaPago) {
       case 'efectivo': return "Efectivo";
       case 'debito': return "Débito";
@@ -254,9 +275,9 @@ const VentasList: React.FC = () => {
     }
   };
 
-  const addPDFHeader = (doc: jsPDF, title: string, fechaFormateada: string) => {
+  const addPDFHeader = (doc: jsPDF, title: string, _fechaForm: string) => {
     const margin = 14;
-    doc.setFillColor(143, 61, 56);
+    doc.setFillColor(30, 41, 59);
     doc.rect(0, 0, doc.internal.pageSize.width, 30, 'F');
     
     doc.setTextColor(255, 255, 255);
@@ -271,6 +292,32 @@ const VentasList: React.FC = () => {
     doc.text(rightText, doc.internal.pageSize.width - margin - textWidth, 20);
     
     doc.setTextColor(50, 50, 50);
+  };
+
+  const buildDetalleVentasBody = (lista: Venta[]) => {
+    return lista.flatMap((v) => {
+      const filaVenta = [
+        formatearHora(v.fechaHora),
+        getNombreCliente(v),
+        formatearFormaPago(v.formaPago, v.estado),
+        formatearMoneda(Number(v.total)),
+      ];
+
+      const filasItems = (v.items || []).map((it) => {
+        const cantidadTxt = it.articulo?.esPesable
+          ? formatearPeso(Number(it.cantidad))
+          : String(it.cantidad);
+
+        return [
+          `→ ${cantidadTxt} ${it.articulo?.nombre ?? 'Artículo'}`,
+          '',
+          `@ ${formatearMoneda(Number(it.precioUnitario))}`,
+          formatearMoneda(Number(it.subtotal)),
+        ];
+      });
+
+      return [filaVenta, ...filasItems];
+    });
   };
 
   const handleDownloadPDF = () => {
@@ -294,14 +341,14 @@ const VentasList: React.FC = () => {
         ['NETO EN CAJA', formatearMoneda(netoTotalDia)],
       ],
       theme: 'striped',
-      headStyles: { fillColor: [45, 68, 84], halign: 'left', fontSize: 11 },
+      headStyles: { fillColor: [30, 41, 59], halign: 'left', fontSize: 11 },
       bodyStyles: { fontStyle: 'bold', fontSize: 11 },
       columnStyles: { 0: { halign: 'left' }, 1: { halign: 'right' } },
       margin: { left: margin, right: margin },
       didParseCell: function (data) {
         if (data.row.index === 2 && data.section === 'body') {
            data.cell.styles.fillColor = [240, 240, 240];
-           data.cell.styles.textColor = [143, 61, 56];
+           data.cell.styles.textColor = [30, 41, 59];
         }
       }
     });
@@ -322,7 +369,7 @@ const VentasList: React.FC = () => {
           formatearMoneda(r.monto)
         ]),
         theme: 'striped',
-        headStyles: { fillColor: [143, 61, 56], halign: 'left', fontSize: 10 },
+        headStyles: { fillColor: [30, 41, 59], halign: 'left', fontSize: 10 },
         bodyStyles: { fontSize: 10 },
         columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
         margin: { left: margin, right: margin }
@@ -336,21 +383,27 @@ const VentasList: React.FC = () => {
       doc.text("Detalle de Movimientos de Venta", margin, currentY);
       autoTable(doc, {
         startY: currentY + 4,
-        head: [['Hora', 'Cliente', 'Forma Pago', 'Total Venta', 'Pagado', 'Estado']],
-        body: ventas.map(v => [
-          formatearHora(v.fechaHora),
-          v.clienteNombre,
-          formatearFormaPago(v.formaPago, v.estado),
-          formatearMoneda(Number(v.total)),
-          formatearMoneda(Number(v.monto_pagado)),
-          getTextoEstado(v),
-        ]),
+        head: [['Hora', 'Cliente', 'Forma Pago', 'Total Venta']],
+        body: buildDetalleVentasBody(ventas),
         theme: 'striped',
-        headStyles: { fillColor: [143, 61, 56], halign: 'left', fontSize: 10 },
+        headStyles: { fillColor: [30, 41, 59], halign: 'left', fontSize: 10 },
         bodyStyles: { fontSize: 10 },
-        columnStyles: { 
-          3: { halign: 'right' },
-          4: { halign: 'right', fontStyle: 'bold' }
+        columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
+        didParseCell: (data) => {
+          if (data.section !== 'body') return;
+          const raw = String(data.cell.raw || '');
+          if (raw.startsWith('→')) {
+            data.cell.styles.fontSize = 8;
+            data.cell.styles.textColor = [100, 100, 100];
+            data.cell.styles.fillColor = [248, 248, 248];
+            data.cell.styles.lineColor = [220, 220, 220];
+            data.cell.styles.lineWidth = 0.1;
+            return;
+          }
+
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [235, 239, 245];
+          data.cell.styles.textColor = [30, 41, 59];
         },
         margin: { left: margin, right: margin }
       });
@@ -380,14 +433,14 @@ const VentasList: React.FC = () => {
         ['NETO EN CAJA', formatearMoneda(netoMañana)],
       ],
       theme: 'striped',
-      headStyles: { fillColor: [45, 68, 84], halign: 'left' },
+      headStyles: { fillColor: [30, 41, 59], halign: 'left' },
       bodyStyles: { fontStyle: 'bold' },
       columnStyles: { 0: { halign: 'left' }, 1: { halign: 'right' } },
       margin: { left: margin, right: margin },
       didParseCell: function (data) {
         if (data.row.index === 2 && data.section === 'body') {
            data.cell.styles.fillColor = [240, 240, 240];
-           data.cell.styles.textColor = [143, 61, 56];
+           data.cell.styles.textColor = [30, 41, 59];
         }
       }
     });
@@ -406,7 +459,7 @@ const VentasList: React.FC = () => {
         ['Transferencia', formatearMoneda(totalesMañana.transferencia)],
       ],
       theme: 'grid',
-      headStyles: { fillColor: [45, 68, 84], halign: 'left' },
+      headStyles: { fillColor: [30, 41, 59], halign: 'left' },
       columnStyles: { 0: { halign: 'left' }, 1: { halign: 'right' } },
       margin: { left: margin, right: margin }
     });
@@ -426,7 +479,7 @@ const VentasList: React.FC = () => {
           formatearMoneda(r.monto)
         ]),
         theme: 'striped',
-        headStyles: { fillColor: [143, 61, 56] },
+        headStyles: { fillColor: [30, 41, 59] },
         columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } }
       });
       currentY = (doc as any).lastAutoTable.finalY + 12;
@@ -437,18 +490,27 @@ const VentasList: React.FC = () => {
       doc.text("Detalle de Ventas (Turno Mañana)", margin, currentY);
       autoTable(doc, {
         startY: currentY + 4,
-        head: [['Hora', 'Cliente', 'Forma Pago', 'Total', 'Pagado', 'Estado']],
-        body: ventasMañana.map(v => [
-          formatearHora(v.fechaHora),
-          v.clienteNombre,
-          formatearFormaPago(v.formaPago, v.estado),
-          formatearMoneda(Number(v.total)),
-          formatearMoneda(Number(v.monto_pagado)),
-          getTextoEstado(v)
-        ]),
+        head: [['Hora', 'Cliente', 'Forma Pago', 'Total']],
+        body: buildDetalleVentasBody(ventasMañana),
         theme: 'striped',
-        headStyles: { fillColor: [143, 61, 56], halign: 'left' },
-        columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' } }
+        headStyles: { fillColor: [30, 41, 59], halign: 'left' },
+        columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
+        didParseCell: (data) => {
+          if (data.section !== 'body') return;
+          const raw = String(data.cell.raw || '');
+          if (raw.startsWith('→')) {
+            data.cell.styles.fontSize = 8;
+            data.cell.styles.textColor = [100, 100, 100];
+            data.cell.styles.fillColor = [248, 248, 248];
+            data.cell.styles.lineColor = [220, 220, 220];
+            data.cell.styles.lineWidth = 0.1;
+            return;
+          }
+
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [235, 239, 245];
+          data.cell.styles.textColor = [30, 41, 59];
+        }
       });
     }
 
@@ -559,23 +621,35 @@ const VentasList: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {ventas.map((venta) => (
+                      {ventas.map((venta) => {
+                        const isRecibo =
+                          venta.estado === 'Completada' &&
+                          (!venta.items || venta.items.length === 0) &&
+                          !venta.clienteId;
+
+                        return (
                         <tr key={venta.id}>
                           <td>{formatearHora(venta.fechaHora)}</td>
-                          <td>{venta.clienteNombre}</td>
+                          <td>{getNombreCliente(venta)}</td>
                           <td style={{ textTransform: 'capitalize' }}>
                             {determinarTurno(venta.fechaHora)}
                           </td>
-                          <td><small>{venta.items?.length || 0} items</small></td>
+                          <td>
+                            {isRecibo ? (
+                              <Badge bg="info">COBRO DE DEUDA</Badge>
+                            ) : (
+                              <small>{venta.items?.length || 0} items</small>
+                            )}
+                          </td>
                           <td>
                              <Badge bg={venta.formaPago ? getFormaPagoBadge(venta.formaPago) : 'secondary'}>
                                {formatearFormaPago(venta.formaPago, venta.estado)}
                              </Badge>
                           </td>
                           <td>
-                             <div><strong>${Number(venta.total).toFixed(2)}</strong></div>
+                             <div><strong>{formatearMoneda(Number(venta.total))}</strong></div>
                              {Number(venta.monto_pagado) < Number(venta.total) && (
-                               <small className="text-muted">Pagado: ${Number(venta.monto_pagado).toFixed(2)}</small>
+                               <small className="text-muted">Pagado: {formatearMoneda(Number(venta.monto_pagado))}</small>
                              )}
                           </td>
                           <td><Badge bg={getEstadoBadge(venta)}>{getTextoEstado(venta)}</Badge></td>
@@ -583,7 +657,8 @@ const VentasList: React.FC = () => {
                             <Button variant="outline-danger" size="sm" onClick={() => abrirModalEliminar(venta)}><Trash2 size={14}/></Button>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </Table>
                   </>
@@ -592,7 +667,7 @@ const VentasList: React.FC = () => {
                 {retiros.length > 0 && (
                   <Card className="mb-3 border-danger bg-light">
                     <Card.Body className="py-2">
-                      <h6 className="text-danger">🔻 Retiros: -${totalRetirosDelDia.toFixed(2)}</h6>
+                      <h6 className="text-danger">🔻 Retiros: -{formatearMoneda(totalRetirosDelDia)}</h6>
                     </Card.Body>
                   </Card>
                 )}
@@ -601,24 +676,24 @@ const VentasList: React.FC = () => {
                   <Card.Body>
                     <h5 className="mb-3">Totales del día</h5>
                     <Row className="mb-3 text-center g-2">
-                        <Col xs={6} md={3}><div className="p-2 bg-white border rounded">💵 Efectivo:<br/><strong>${totalesPorFormaPago.efectivo.toFixed(2)}</strong></div></Col>
-                        <Col xs={6} md={3}><div className="p-2 bg-white border rounded">💳 Débito:<br/><strong>${totalesPorFormaPago.debito.toFixed(2)}</strong></div></Col>
-                        <Col xs={6} md={3}><div className="p-2 bg-white border rounded">💳 Crédito:<br/><strong>${totalesPorFormaPago.credito.toFixed(2)}</strong></div></Col>
-                        <Col xs={6} md={3}><div className="p-2 bg-white border rounded">🏦 Transf:<br/><strong>${totalesPorFormaPago.transferencia.toFixed(2)}</strong></div></Col>
+                      <Col xs={6} md={3}><div className="p-2 bg-white border rounded">💵 Efectivo:<br/><strong>{formatearMoneda(totalesDia.efectivo)}</strong></div></Col>
+                      <Col xs={6} md={3}><div className="p-2 bg-white border rounded">💳 Débito:<br/><strong>{formatearMoneda(totalesDia.debito)}</strong></div></Col>
+                      <Col xs={6} md={3}><div className="p-2 bg-white border rounded">💳 Crédito:<br/><strong>{formatearMoneda(totalesDia.credito)}</strong></div></Col>
+                      <Col xs={6} md={3}><div className="p-2 bg-white border rounded">🏦 Transf:<br/><strong>{formatearMoneda(totalesDia.transferencia)}</strong></div></Col>
                     </Row>
                     <hr />
                     <div className="d-flex justify-content-between align-items-center">
                       <div><h6 className="mb-0">Total Ventas</h6></div>
-                      <h5 className="mb-0 text-success fw-bold">${totalRecaudadoDia.toFixed(2)}</h5>
+                      <h5 className="mb-0 text-success fw-bold">{formatearMoneda(totalRecaudadoDia)}</h5>
                     </div>
                     <div className="d-flex justify-content-between align-items-center mt-2 text-danger">
                       <div><h6 className="mb-0">Total Retiros</h6></div>
-                      <h5 className="mb-0 fw-bold">-${totalRetirosDelDia.toFixed(2)}</h5>
+                      <h5 className="mb-0 fw-bold">-{formatearMoneda(totalRetirosDelDia)}</h5>
                     </div>
                     <hr />
                     <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
                       <h5 className="mb-0 fw-bold" style={{color: '#8f3d38'}}>NETO EN CAJA</h5>
-                      <h3 className="mb-0 fw-bold" style={{color: '#8f3d38'}}>${netoTotalDia.toFixed(2)}</h3>
+                      <h3 className="mb-0 fw-bold" style={{color: '#8f3d38'}}>{formatearMoneda(netoTotalDia)}</h3>
                     </div>
                   </Card.Body>
                 </Card>
@@ -629,20 +704,20 @@ const VentasList: React.FC = () => {
                             <Card.Body>
                                 <h6 className="mb-2 fw-bold text-primary">Turno Mañana</h6>
                                 <Row className="g-1 mb-2" style={{fontSize: '0.8rem'}}>
-                                    <Col xs={6}>Efectivo: ${totalesMañana.efectivo.toFixed(0)}</Col>
-                                    <Col xs={6}>Débito: ${totalesMañana.debito.toFixed(0)}</Col>
-                                    <Col xs={6}>Crédito: ${totalesMañana.credito.toFixed(0)}</Col>
-                                    <Col xs={6}>Transferencia: ${totalesMañana.transferencia.toFixed(0)}</Col>
+                                  <Col xs={6}>Efectivo: {formatearMoneda(totalesMañana.efectivo)}</Col>
+                                  <Col xs={6}>Débito: {formatearMoneda(totalesMañana.debito)}</Col>
+                                  <Col xs={6}>Crédito: {formatearMoneda(totalesMañana.credito)}</Col>
+                                  <Col xs={6}>Transferencia: {formatearMoneda(totalesMañana.transferencia)}</Col>
                                 </Row>
                                 <div className="d-flex justify-content-between text-success fw-bold">
-                                    <span>Ventas:</span> <span>${totalRecaudadoMañana.toFixed(2)}</span>
+                                  <span>Ventas:</span> <span>{formatearMoneda(totalRecaudadoMañana)}</span>
                                 </div>
                                 <div className="d-flex justify-content-between text-danger">
-                                    <span>Retiros:</span> <span>-${totalRetirosMañana.toFixed(2)}</span>
+                                  <span>Retiros:</span> <span>-{formatearMoneda(totalRetirosMañana)}</span>
                                 </div>
                                 <hr className="my-1"/>
                                 <div className="d-flex justify-content-between fw-bold" style={{color: '#0d6efd'}}>
-                                    <span>Neto Mañana:</span> <span>${netoMañana.toFixed(2)}</span>
+                                  <span>Neto Mañana:</span> <span>{formatearMoneda(netoMañana)}</span>
                                 </div>
                             </Card.Body>
                         </Card>
@@ -652,20 +727,20 @@ const VentasList: React.FC = () => {
                             <Card.Body>
                                 <h6 className="mb-2 fw-bold text-warning" style={{color: '#b88700 !important'}}>Turno Tarde</h6>
                                 <Row className="g-1 mb-2" style={{fontSize: '0.8rem'}}>
-                                    <Col xs={6}>Efectivo: ${totalesTarde.efectivo.toFixed(0)}</Col>
-                                    <Col xs={6}>Débito: ${totalesTarde.debito.toFixed(0)}</Col>
-                                    <Col xs={6}>Crédito: ${totalesTarde.credito.toFixed(0)}</Col>
-                                    <Col xs={6}>Transferencia: ${totalesTarde.transferencia.toFixed(0)}</Col>
+                                  <Col xs={6}>Efectivo: {formatearMoneda(totalesTarde.efectivo)}</Col>
+                                  <Col xs={6}>Débito: {formatearMoneda(totalesTarde.debito)}</Col>
+                                  <Col xs={6}>Crédito: {formatearMoneda(totalesTarde.credito)}</Col>
+                                  <Col xs={6}>Transferencia: {formatearMoneda(totalesTarde.transferencia)}</Col>
                                 </Row>
                                 <div className="d-flex justify-content-between text-success fw-bold">
-                                    <span>Ventas:</span> <span>${totalRecaudadoTarde.toFixed(2)}</span>
+                                  <span>Ventas:</span> <span>{formatearMoneda(totalRecaudadoTarde)}</span>
                                 </div>
                                 <div className="d-flex justify-content-between text-danger">
-                                    <span>Retiros:</span> <span>-${totalRetirosTarde.toFixed(2)}</span>
+                                  <span>Retiros:</span> <span>-{formatearMoneda(totalRetirosTarde)}</span>
                                 </div>
                                 <hr className="my-1"/>
                                 <div className="d-flex justify-content-between fw-bold" style={{color: '#b88700'}}>
-                                    <span>Neto Tarde:</span> <span>${netoTarde.toFixed(2)}</span>
+                                  <span>Neto Tarde:</span> <span>{formatearMoneda(netoTarde)}</span>
                                 </div>
                             </Card.Body>
                         </Card>
@@ -682,7 +757,7 @@ const VentasList: React.FC = () => {
            <Modal.Header closeButton><Modal.Title>Eliminar Venta</Modal.Title></Modal.Header>
            <Modal.Body>
              <p>¿Seguro? Se devolverá el stock.</p>
-             {ventaAEliminar && <p>Total: ${ventaAEliminar.total}</p>}
+             {ventaAEliminar && <p>Total: {formatearMoneda(ventaAEliminar.total)}</p>}
            </Modal.Body>
            <Modal.Footer>
              <Button variant="secondary" onClick={cancelarEliminacion}>Cancelar</Button>

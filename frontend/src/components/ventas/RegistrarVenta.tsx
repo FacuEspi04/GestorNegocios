@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { formatearMoneda, formatearPeso, formatearPrecioInput, parsePrecioInput } from "../../utils/formatters";
 import {
   Card,
   Form,
@@ -19,9 +20,11 @@ import {
   type CreateVentaDto,
   type CreateVentaItemDto,
   type FormaPago,
+  type Venta,
   getClientes,
   createCliente,
   type Cliente,
+  getVentasPorFecha,
 } from "../../services/apiService";
 
 // El tipo de Articulo que usa este componente
@@ -32,12 +35,14 @@ interface ArticuloVenta {
   marca: string;
   stock: number;
   precio: number;
+  esPesable: boolean;
 }
 
 interface ItemVenta {
   articulo: ArticuloVenta;
   cantidad: number;
   subtotal: number;
+  subtotalPersonalizado?: number;
 }
 
 const RegistrarVenta: React.FC = () => {
@@ -47,6 +52,9 @@ const RegistrarVenta: React.FC = () => {
   // Estado para las sugerencias de búsqueda por nombre
   const [sugerencias, setSugerencias] = useState<ArticuloVenta[]>([]);
   const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
+
+  const [sugerenciasClientes, setSugerenciasClientes] = useState<Cliente[]>([]);
+  const [mostrarSugerenciasClientes, setMostrarSugerenciasClientes] = useState(false);
 
   const [itemsVenta, setItemsVenta] = useState<ItemVenta[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -67,8 +75,17 @@ const RegistrarVenta: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Estados para artículos pesables
+  const [articuloPesableActivo, setArticuloPesableActivo] = useState<ArticuloVenta | null>(null);
+  const [modalPesoCantidad, setModalPesoCantidad] = useState("");
+  const [modalPesoUnidad, setModalPesoUnidad] = useState<"gramos" | "kilos">("gramos");
+  const [modalPrecioFinal, setModalPrecioFinal] = useState("");
+  const [modalPrecioEditado, setModalPrecioEditado] = useState(false);
+  const [clienteGeneralConsecutivo, setClienteGeneralConsecutivo] = useState<number | null>(null);
+
   // Referencia para manejar clics fuera del buscador
   const searchWrapperRef = useRef<HTMLDivElement>(null);
+  const clientesWrapperRef = useRef<HTMLDivElement>(null);
 
   // Cargar artículos desde la API
   useEffect(() => {
@@ -95,6 +112,7 @@ const RegistrarVenta: React.FC = () => {
             codigoBarras: a.codigo_barras,
             precio: Number(a.precio),
             stock: a.stock ?? 0,
+            esPesable: a.esPesable || false,
           };
         });
 
@@ -119,10 +137,58 @@ const RegistrarVenta: React.FC = () => {
       if (searchWrapperRef.current && !searchWrapperRef.current.contains(event.target as Node)) {
         setMostrarSugerencias(false);
       }
+      if (clientesWrapperRef.current && !clientesWrapperRef.current.contains(event.target as Node)) {
+        setMostrarSugerenciasClientes(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const getTodayString = () => {
+    const hoy = new Date();
+    const year = hoy.getFullYear();
+    const month = String(hoy.getMonth() + 1).padStart(2, '0');
+    const day = String(hoy.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  useEffect(() => {
+    const cargarConsecutivoClienteGeneral = async () => {
+      if (!showModal) return;
+      if (esCtaCte) {
+        setClienteGeneralConsecutivo(null);
+        return;
+      }
+
+      if (nombreCliente.trim()) {
+        setClienteGeneralConsecutivo(null);
+        return;
+      }
+
+      try {
+        const ventasDia: Venta[] = await getVentasPorFecha(getTodayString());
+        const contador = ventasDia.filter((venta) => {
+          const nombre = (venta.clienteNombre || '').trim();
+          return !nombre || nombre === 'Cliente General' || nombre.startsWith('Cliente General ');
+        }).length;
+        setClienteGeneralConsecutivo(contador + 1);
+      } catch (e) {
+        setClienteGeneralConsecutivo(null);
+      }
+    };
+
+    cargarConsecutivoClienteGeneral();
+  }, [showModal, esCtaCte, nombreCliente]);
+
+  const getNombreClienteModal = () => {
+    if (esCtaCte && clienteIdSeleccionado) {
+      return listaClientes.find((c) => c.id === clienteIdSeleccionado)?.nombre;
+    }
+    if (nombreCliente.trim()) return nombreCliente;
+    if (clienteGeneralConsecutivo) return `Cliente General ${clienteGeneralConsecutivo}`;
+    return "Cliente General";
+  };
 
   // Lógica de filtrado mientras el usuario escribe
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,7 +209,11 @@ const RegistrarVenta: React.FC = () => {
   };
 
   // Lógica para agregar un artículo
-  const procesarAgregadoDeArticulo = (articulo: ArticuloVenta) => {
+  const procesarAgregadoDeArticulo = (
+    articulo: ArticuloVenta,
+    cantidadManual?: number,
+    subtotalPersonalizado?: number,
+  ) => {
     setError("");
 
     if (articulo.stock <= 0) {
@@ -153,12 +223,27 @@ const RegistrarVenta: React.FC = () => {
       return;
     }
 
+    if (articulo.esPesable && cantidadManual === undefined) {
+      setArticuloPesableActivo(articulo);
+      setModalPesoCantidad("");
+      setModalPesoUnidad("gramos");
+      setModalPrecioFinal("");
+      setModalPrecioEditado(false);
+      setCodigoBarras("");
+      setSugerencias([]);
+      setMostrarSugerencias(false);
+      return;
+    }
+
+    const cantidadA_Agregar = cantidadManual !== undefined ? cantidadManual : 1;
+
     const itemExistente = itemsVenta.find(
       (item) => item.articulo.id === articulo.id,
     );
 
     if (itemExistente) {
-      if (itemExistente.cantidad >= articulo.stock) {
+      const nuevaCantidad = itemExistente.cantidad + cantidadA_Agregar;
+      if (nuevaCantidad > articulo.stock) {
         setError(
           `No hay suficiente stock de "${articulo.nombre}". Disponible: ${articulo.stock}`,
         );
@@ -167,24 +252,46 @@ const RegistrarVenta: React.FC = () => {
         return;
       }
 
+      const subtotalActualizado =
+        subtotalPersonalizado !== undefined
+          ? itemExistente.subtotal + subtotalPersonalizado
+          : nuevaCantidad * articulo.precio;
+
       setItemsVenta(
         itemsVenta.map((item) =>
           item.articulo.id === articulo.id
             ? {
                 ...item,
-                cantidad: item.cantidad + 1,
-                subtotal: (item.cantidad + 1) * articulo.precio,
+                cantidad: nuevaCantidad,
+                subtotal: subtotalActualizado,
+                subtotalPersonalizado:
+                  subtotalPersonalizado !== undefined
+                    ? subtotalActualizado
+                    : item.subtotalPersonalizado,
               }
             : item,
         ),
       );
     } else {
+      if (cantidadA_Agregar > articulo.stock) {
+        setError(
+          `No hay suficiente stock de "${articulo.nombre}". Disponible: ${articulo.stock}`,
+        );
+        setCodigoBarras("");
+        setMostrarSugerencias(false);
+        return;
+      }
+
       setItemsVenta([
         ...itemsVenta,
         {
           articulo,
-          cantidad: 1,
-          subtotal: articulo.precio,
+          cantidad: cantidadA_Agregar,
+          subtotal:
+            subtotalPersonalizado !== undefined
+              ? subtotalPersonalizado
+              : cantidadA_Agregar * articulo.precio,
+          subtotalPersonalizado,
         },
       ]);
     }
@@ -193,6 +300,59 @@ const RegistrarVenta: React.FC = () => {
     setSugerencias([]);
     setMostrarSugerencias(false);
   };
+
+  const confirmarArticuloPesable = () => {
+    if (!articuloPesableActivo) return;
+
+    let cantidadNum = parseFloat(modalPesoCantidad.replace(',', '.'));
+    if (isNaN(cantidadNum) || cantidadNum <= 0) {
+      setError("Ingrese una cantidad válida");
+      return;
+    }
+
+    const cantidadEnKilos =
+      modalPesoUnidad === "gramos" ? cantidadNum / 1000 : cantidadNum;
+
+    const precioFinalNum = modalPrecioFinal
+      ? parsePrecioInput(modalPrecioFinal)
+      : articuloPesableActivo.precio * cantidadEnKilos;
+
+    if (isNaN(precioFinalNum) || precioFinalNum <= 0) {
+      setError("Ingrese un precio final válido");
+      return;
+    }
+
+    procesarAgregadoDeArticulo(
+      articuloPesableActivo,
+      cantidadEnKilos,
+      precioFinalNum,
+    );
+    setArticuloPesableActivo(null);
+  };
+
+  const calcularSubtotalSugerido = (
+    cantidadTexto: string,
+    unidad: "gramos" | "kilos",
+    precioKg: number,
+  ): string => {
+    const cantidadNum = parseFloat(cantidadTexto.replace(',', '.'));
+    if (isNaN(cantidadNum) || cantidadNum <= 0) return "";
+    const cantidadKilos = unidad === "gramos" ? cantidadNum / 1000 : cantidadNum;
+    const subtotal = cantidadKilos * precioKg;
+    const subtotalTexto = subtotal.toFixed(2).replace('.', ',');
+    return formatearPrecioInput(subtotalTexto);
+  };
+
+  useEffect(() => {
+    if (!articuloPesableActivo) return;
+    if (modalPrecioEditado) return;
+    const sugerido = calcularSubtotalSugerido(
+      modalPesoCantidad,
+      modalPesoUnidad,
+      articuloPesableActivo.precio,
+    );
+    setModalPrecioFinal(sugerido);
+  }, [modalPesoCantidad, modalPesoUnidad, articuloPesableActivo, modalPrecioEditado]);
 
   // Buscar por código EXACTO
   const buscarArticuloPorCodigo = (codigo: string): ArticuloVenta | undefined => {
@@ -291,6 +451,7 @@ const RegistrarVenta: React.FC = () => {
     const itemsDto: CreateVentaItemDto[] = itemsVenta.map(item => ({
       articuloId: Number(item.articulo.id), 
       cantidad: item.cantidad,
+      subtotalPersonalizado: item.subtotalPersonalizado,
     }));
 
     const clienteEncontrado = esCtaCte && clienteIdSeleccionado 
@@ -313,7 +474,7 @@ const RegistrarVenta: React.FC = () => {
       const ventaGuardada = await createVenta(nuevaVenta);
       
       setShowModal(false);
-      setExito(`¡Venta N° ${ventaGuardada.numeroVenta} registrada! Total: $${Number(ventaGuardada.total).toFixed(2)}`);
+      setExito(`¡Venta N° ${ventaGuardada.numeroVenta} registrada! Total: ${formatearMoneda(ventaGuardada.total)}`);
       
       setItemsVenta([]);
       setNombreCliente("");
@@ -331,6 +492,7 @@ const RegistrarVenta: React.FC = () => {
         codigoBarras: a.codigo_barras,
         precio: Number(a.precio),
         stock: a.stock ?? 0,
+        esPesable: a.esPesable ?? false
       }));
       setCatalogoArticulos(mapeados);
       
@@ -441,12 +603,69 @@ const RegistrarVenta: React.FC = () => {
             ) : (
               <Form.Group className="mb-3">
                 <Form.Label>Nombre del Cliente (Opcional)</Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder="Ingresa el nombre del cliente..."
-                  value={nombreCliente}
-                  onChange={(e) => setNombreCliente(e.target.value)}
-                />
+                <div ref={clientesWrapperRef} style={{ position: "relative" }}>
+                  <Form.Control
+                    type="text"
+                    placeholder="Ingresa el nombre del cliente..."
+                    value={nombreCliente}
+                    onChange={(e) => {
+                      const valor = e.target.value;
+                      setNombreCliente(valor);
+                      const encontrado = listaClientes.find(
+                        (c) => c.nombre.toLowerCase() === valor.toLowerCase(),
+                      );
+                      setClienteIdSeleccionado(encontrado ? encontrado.id : "");
+
+                      if (valor.trim().length > 1) {
+                        const matches = listaClientes.filter((c) =>
+                          c.nombre.toLowerCase().includes(valor.toLowerCase()),
+                        );
+                        setSugerenciasClientes(matches.slice(0, 6));
+                        setMostrarSugerenciasClientes(true);
+                      } else {
+                        setSugerenciasClientes([]);
+                        setMostrarSugerenciasClientes(false);
+                      }
+                    }}
+                    autoComplete="off"
+                  />
+                  {mostrarSugerenciasClientes && sugerenciasClientes.length > 0 && (
+                    <ListGroup
+                      style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: 0,
+                        right: 0,
+                        zIndex: 1050,
+                        maxHeight: "200px",
+                        overflowY: "auto",
+                        boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                      }}
+                    >
+                      {sugerenciasClientes.map((c) => (
+                        <ListGroup.Item
+                          key={c.id}
+                          action
+                          onClick={() => {
+                            setNombreCliente(c.nombre);
+                            setClienteIdSeleccionado(c.id);
+                            setMostrarSugerenciasClientes(false);
+                          }}
+                          className="d-flex justify-content-between align-items-center"
+                        >
+                          <div>
+                            <strong>{c.nombre}</strong>
+                            {c.telefono && (
+                              <div className="text-muted small" style={{ fontSize: "0.85em" }}>
+                                {c.telefono}
+                              </div>
+                            )}
+                          </div>
+                        </ListGroup.Item>
+                      ))}
+                    </ListGroup>
+                  )}
+                </div>
               </Form.Group>
             )}
 
@@ -479,7 +698,7 @@ const RegistrarVenta: React.FC = () => {
                       <InputGroup.Text>%</InputGroup.Text>
                     </InputGroup>
                     <Form.Text className="text-muted">
-                      Interés actual: {interesPorcentaje}% (${calcularInteres().toFixed(2)})
+                      Interés actual: {interesPorcentaje}% ({formatearMoneda(calcularInteres())})
                     </Form.Text>
                   </Form.Group>
                 )}
@@ -552,7 +771,7 @@ const RegistrarVenta: React.FC = () => {
                               Stock: {art.stock}
                             </Badge>
                             <div className="fw-bold text-primary mt-1">
-                              ${art.precio.toFixed(2)}
+                              {formatearMoneda(art.precio)}
                             </div>
                           </div>
                         </ListGroup.Item>
@@ -589,37 +808,41 @@ const RegistrarVenta: React.FC = () => {
                   {itemsVenta.map((item) => (
                     <tr key={item.articulo.id}>
                       <td>{item.articulo.nombre}</td>
-                      <td>${item.articulo.precio.toFixed(2)}</td>
+                      <td>{formatearMoneda(item.articulo.precio)}{item.articulo.esPesable ? " /Kg" : ""}</td>
                       <td>
-                        <InputGroup size="sm">
-                          <Button
-                            variant="outline-secondary"
-                            onClick={() => actualizarCantidad(item.articulo.id, item.cantidad - 1)}
-                          >
-                            −
-                          </Button>
-                          <Form.Control
-                            type="number"
-                            min="1"
-                            max={item.articulo.stock}
-                            value={item.cantidad}
-                            onChange={(e) => {
-                              const valor = parseInt(e.target.value) || 0;
-                              actualizarCantidad(item.articulo.id, valor);
-                            }}
-                            className="text-center"
-                            style={{ maxWidth: "60px" }}
-                          />
-                          <Button
-                            variant="outline-secondary"
-                            onClick={() => actualizarCantidad(item.articulo.id, item.cantidad + 1)}
-                            disabled={item.cantidad >= item.articulo.stock}
-                          >
-                            +
-                          </Button>
-                        </InputGroup>
+                        {item.articulo.esPesable ? (
+                            <span className="fw-bold">{formatearPeso(item.cantidad)}</span>
+                        ) : (
+                          <InputGroup size="sm">
+                            <Button
+                              variant="outline-secondary"
+                              onClick={() => actualizarCantidad(item.articulo.id, item.cantidad - 1)}
+                            >
+                              −
+                            </Button>
+                            <Form.Control
+                              type="number"
+                              min="1"
+                              max={item.articulo.stock}
+                              value={item.cantidad}
+                              onChange={(e) => {
+                                const valor = parseFloat(e.target.value) || 0;
+                                actualizarCantidad(item.articulo.id, valor);
+                              }}
+                              className="text-center"
+                              style={{ maxWidth: "60px" }}
+                            />
+                            <Button
+                              variant="outline-secondary"
+                              onClick={() => actualizarCantidad(item.articulo.id, item.cantidad + 1)}
+                              disabled={item.cantidad >= item.articulo.stock}
+                            >
+                              +
+                            </Button>
+                          </InputGroup>
+                        )}
                       </td>
-                      <td>${item.subtotal.toFixed(2)}</td>
+                      <td>{formatearMoneda(item.subtotal)}</td>
                       <td className="text-center">
                         <Button
                           variant="danger"
@@ -633,19 +856,19 @@ const RegistrarVenta: React.FC = () => {
                   ))}
                   <tr style={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}>
                     <td colSpan={3} className="text-end">SUBTOTAL:</td>
-                    <td>${calcularTotal().toFixed(2)}</td>
+                    <td>{formatearMoneda(calcularTotal())}</td>
                     <td></td>
                   </tr>
                   {!esCtaCte && formaPago === "credito" && calcularInteres() > 0 && (
                     <tr style={{ backgroundColor: "#fff3cd" }}>
                       <td colSpan={3} className="text-end">INTERÉS ({interesPorcentaje}%):</td>
-                      <td>${calcularInteres().toFixed(2)}</td>
+                      <td>{formatearMoneda(calcularInteres())}</td>
                       <td></td>
                     </tr>
                   )}
                   <tr className="bg-slate-800 text-white font-bold">
                     <td colSpan={3} className="text-end">TOTAL A PAGAR:</td>
-                    <td>${calcularTotalFinal().toFixed(2)}</td>
+                    <td>{formatearMoneda(calcularTotalFinal())}</td>
                     <td></td>
                   </tr>
                 </tbody>
@@ -667,9 +890,7 @@ const RegistrarVenta: React.FC = () => {
             <h5 className="mb-3">Resumen de la venta:</h5>
             <p>
               <strong>Cliente:</strong>{" "}
-              {esCtaCte && clienteIdSeleccionado 
-                ? listaClientes.find((c) => c.id === clienteIdSeleccionado)?.nombre 
-                : (nombreCliente || "Cliente General")}
+              {getNombreClienteModal()}
             </p>
             {esCtaCte ? (
               <Alert variant="warning"><strong>⚠️ CUENTA CORRIENTE - Pago Pendiente</strong></Alert>
@@ -679,21 +900,21 @@ const RegistrarVenta: React.FC = () => {
             <ul>
               {itemsVenta.map((item) => (
                 <li key={item.articulo.id}>
-                  {item.articulo.nombre} x {item.cantidad} = ${item.subtotal.toFixed(2)}
+                  {item.articulo.nombre} x {item.articulo.esPesable ? formatearPeso(item.cantidad) : item.cantidad} = {formatearMoneda(item.subtotal)}
                 </li>
               ))}
             </ul>
             <hr />
             <div className="d-flex justify-content-between">
-              <span>Subtotal:</span><strong>${calcularTotal().toFixed(2)}</strong>
+              <span>Subtotal:</span><strong>{formatearMoneda(calcularTotal())}</strong>
             </div>
             {!esCtaCte && formaPago === "credito" && calcularInteres() > 0 && (
               <div className="d-flex justify-content-between text-warning">
-                <span>Interés ({interesPorcentaje}%):</span><strong>${calcularInteres().toFixed(2)}</strong>
+                <span>Interés ({interesPorcentaje}%):</span><strong>{formatearMoneda(calcularInteres())}</strong>
               </div>
             )}
             <hr />
-            <h4 className="text-end">Total {esCtaCte ? "Pendiente" : "a Pagar"}: ${calcularTotalFinal().toFixed(2)}</h4>
+            <h4 className="text-end">Total {esCtaCte ? "Pendiente" : "a Pagar"}: {formatearMoneda(calcularTotalFinal())}</h4>
             {error && isSubmitting && (
                <Alert variant="danger" className="mt-3">{error}</Alert>
             )}
@@ -737,6 +958,91 @@ const RegistrarVenta: React.FC = () => {
             </Button>
           </Modal.Footer>
         </Modal>
+
+        {/* Modal de Cantidad (Venta por Peso) */}
+        <Modal 
+          show={!!articuloPesableActivo} 
+          onHide={() => setArticuloPesableActivo(null)} 
+          centered
+          onEntered={() => {
+            document.getElementById('inputPesoVenta')?.focus();
+          }}
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>Indicar Cantidad</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <h5 className="mb-3 text-primary">{articuloPesableActivo?.nombre}</h5>
+            
+            <Form.Group className="mb-4">
+              <Form.Label>Unidad de medida</Form.Label>
+              <div className="d-flex gap-4">
+                <Form.Check
+                  type="radio"
+                  id="unidadGramos"
+                  label="Gramos (gr)"
+                  name="unidadMedida"
+                  checked={modalPesoUnidad === "gramos"}
+                  onChange={() => setModalPesoUnidad("gramos")}
+                />
+                <Form.Check
+                  type="radio"
+                  id="unidadKilos"
+                  label="Kilos (Kg)"
+                  name="unidadMedida"
+                  checked={modalPesoUnidad === "kilos"}
+                  onChange={() => setModalPesoUnidad("kilos")}
+                />
+              </div>
+            </Form.Group>
+
+            <Form.Group>
+              <Form.Label>Cantidad en {modalPesoUnidad}</Form.Label>
+              <InputGroup>
+                <Form.Control
+                  id="inputPesoVenta"
+                  type="number"
+                  step="any"
+                  placeholder={modalPesoUnidad === "gramos" ? "Ej: 250" : "Ej: 1.5"}
+                  value={modalPesoCantidad}
+                  onChange={(e) => setModalPesoCantidad(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      confirmarArticuloPesable();
+                    }
+                  }}
+                />
+                <InputGroup.Text>{modalPesoUnidad === "gramos" ? "gr" : "Kg"}</InputGroup.Text>
+              </InputGroup>
+            </Form.Group>
+
+            <Form.Group className="mt-3">
+              <Form.Label>Precio Final / Subtotal</Form.Label>
+              <InputGroup>
+                <InputGroup.Text>$</InputGroup.Text>
+                <Form.Control
+                  type="text"
+                  placeholder="Ej: 1.000"
+                  value={modalPrecioFinal}
+                  onChange={(e) => {
+                    setModalPrecioFinal(formatearPrecioInput(e.target.value));
+                    setModalPrecioEditado(true);
+                  }}
+                  inputMode="decimal"
+                />
+              </InputGroup>
+              <Form.Text className="text-muted">
+                Se autocalcula en base al precio por kilo, pero podés editarlo.
+              </Form.Text>
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setArticuloPesableActivo(null)}>Cancelar</Button>
+            <Button variant="success" onClick={confirmarArticuloPesable}>Aceptar</Button>
+          </Modal.Footer>
+        </Modal>
+
       </div>
     </div>
   );
