@@ -296,11 +296,20 @@ const VentasList: React.FC = () => {
 
   const buildDetalleVentasBody = (lista: Venta[]) => {
     return lista.flatMap((v) => {
+      const total = Number(v.total);
+      const pagado = Number(v.monto_pagado || 0);
+      const tieneItems = (v.items || []).length > 0;
+      const tieneFormaPagoReal = !!v.formaPago;
+      const tieneMontoPositivo = pagado > 0 || total > 0;
+      const isRecibo = tieneFormaPagoReal && !tieneItems && tieneMontoPositivo;
+
+      const nombreCliente = `${getNombreCliente(v)}${isRecibo ? ' (PAGO DE CTA. CTE.)' : ''}`;
+
       const filaVenta = [
         formatearHora(v.fechaHora),
-        getNombreCliente(v),
+        nombreCliente,
         formatearFormaPago(v.formaPago, v.estado),
-        formatearMoneda(Number(v.total)),
+        formatearMoneda(total),
       ];
 
       const filasItems = (v.items || []).map((it) => {
@@ -417,24 +426,24 @@ const VentasList: React.FC = () => {
     const doc = new jsPDF();
     const margin = 14;
     
-    addPDFHeader(doc, 'Resumen Caja - Turno Mañana', formatearFecha(fechaSeleccionada));
+    addPDFHeader(doc, 'Resumen Turno Mañana', formatearFecha(fechaSeleccionada));
 
     let currentY = 40;
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("Totales Generales (Turno Mañana)", margin, currentY);
+    doc.text("Totales del Turno Mañana", margin, currentY);
 
     autoTable(doc, {
       startY: currentY + 4,
       head: [['Concepto', 'Monto']],
       body: [
-        ['Total Recaudado', formatearMoneda(totalRecaudadoMañana)],
-        ['Total Retiros', `-${formatearMoneda(totalRetirosMañana)}`],
+        ['Total Recaudado (Ingresos Reales)', formatearMoneda(totalRecaudadoMañana)],
+        ['Total Retiros de Caja', `-${formatearMoneda(totalRetirosMañana)}`],
         ['NETO EN CAJA', formatearMoneda(netoMañana)],
       ],
       theme: 'striped',
-      headStyles: { fillColor: [30, 41, 59], halign: 'left' },
-      bodyStyles: { fontStyle: 'bold' },
+      headStyles: { fillColor: [30, 41, 59], halign: 'left', fontSize: 11 },
+      bodyStyles: { fontStyle: 'bold', fontSize: 11 },
       columnStyles: { 0: { halign: 'left' }, 1: { halign: 'right' } },
       margin: { left: margin, right: margin },
       didParseCell: function (data) {
@@ -446,29 +455,11 @@ const VentasList: React.FC = () => {
     });
 
     currentY = (doc as any).lastAutoTable.finalY + 12;
-    doc.setFontSize(14);
-    doc.text("Resumen por Forma de Pago", margin, currentY);
 
-    autoTable(doc, {
-      startY: currentY + 4,
-      head: [['Forma de Pago', 'Monto']],
-      body: [
-        ['Efectivo', formatearMoneda(totalesMañana.efectivo)],
-        ['Débito', formatearMoneda(totalesMañana.debito)],
-        ['Crédito', formatearMoneda(totalesMañana.credito)],
-        ['Transferencia', formatearMoneda(totalesMañana.transferencia)],
-      ],
-      theme: 'grid',
-      headStyles: { fillColor: [30, 41, 59], halign: 'left' },
-      columnStyles: { 0: { halign: 'left' }, 1: { halign: 'right' } },
-      margin: { left: margin, right: margin }
-    });
-
-    currentY = (doc as any).lastAutoTable.finalY + 12;
     if (retirosMañana.length > 0) {
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("Detalle de Retiros (Turno Mañana)", margin, currentY);
+      doc.text("Detalle de Retiros", margin, currentY);
       autoTable(doc, {
         startY: currentY + 4,
         head: [['Hora', 'Motivo', 'Medio de Pago', 'Monto']],
@@ -479,21 +470,25 @@ const VentasList: React.FC = () => {
           formatearMoneda(r.monto)
         ]),
         theme: 'striped',
-        headStyles: { fillColor: [30, 41, 59] },
-        columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } }
+        headStyles: { fillColor: [30, 41, 59], halign: 'left', fontSize: 10 },
+        bodyStyles: { fontSize: 10 },
+        columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
+        margin: { left: margin, right: margin }
       });
       currentY = (doc as any).lastAutoTable.finalY + 12;
     }
 
     if (ventasMañana.length > 0) {
       doc.setFontSize(14);
-      doc.text("Detalle de Ventas (Turno Mañana)", margin, currentY);
+      doc.setFont("helvetica", "bold");
+      doc.text("Detalle de Movimientos de Venta", margin, currentY);
       autoTable(doc, {
         startY: currentY + 4,
-        head: [['Hora', 'Cliente', 'Forma Pago', 'Total']],
+        head: [['Hora', 'Cliente', 'Forma Pago', 'Total Venta']],
         body: buildDetalleVentasBody(ventasMañana),
         theme: 'striped',
-        headStyles: { fillColor: [30, 41, 59], halign: 'left' },
+        headStyles: { fillColor: [30, 41, 59], halign: 'left', fontSize: 10 },
+        bodyStyles: { fontSize: 10 },
         columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
         didParseCell: (data) => {
           if (data.section !== 'body') return;
@@ -510,7 +505,8 @@ const VentasList: React.FC = () => {
           data.cell.styles.fontStyle = 'bold';
           data.cell.styles.fillColor = [235, 239, 245];
           data.cell.styles.textColor = [30, 41, 59];
-        }
+        },
+        margin: { left: margin, right: margin }
       });
     }
 
