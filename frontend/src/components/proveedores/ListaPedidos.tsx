@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { formatearMoneda } from "../../utils/formatters";
 import { Trash2, FileDown, PlusCircle, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
@@ -124,12 +123,14 @@ const ListaPedidos: React.FC = () => {
 
   // Parsear la fecha como local (no UTC) para evitar el desfase de timezone.
   // "2026-04-04" sin hora se toma como UTC midnight; agregando T00:00:00 se fuerza a local.
-  const parseFecha = (fechaStr: string) => {
-    if (!fechaStr) return new Date();
+  const parseFecha = (fecha: string | Date) => {
+    if (!fecha) return new Date();
+    // Si ya es un objeto Date, devolverlo directamente
+    if (fecha instanceof Date) return fecha;
     // Si ya incluye hora (ISO con T), usarlo directo
-    if (fechaStr.includes('T')) return new Date(fechaStr);
+    if (fecha.includes('T')) return new Date(fecha);
     // Si es solo fecha "YYYY-MM-DD", parsear como local
-    const [y, m, d] = fechaStr.split('-').map(Number);
+    const [y, m, d] = fecha.split('-').map(Number);
     return new Date(y, m - 1, d);
   };
 

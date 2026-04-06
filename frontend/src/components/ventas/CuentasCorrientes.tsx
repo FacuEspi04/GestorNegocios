@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Wallet, CheckCircle, Wallet2, CalendarDays, Users, PlusCircle, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Wallet, CheckCircle, Wallet2, CalendarDays, Users, PlusCircle, Pencil, Trash2, History, EyeOff } from "lucide-react";
 import {
   getVentasPendientes,
   type Venta,
@@ -41,6 +41,7 @@ const CuentasCorrientes: React.FC = () => {
   const [clienteAEditar, setClienteAEditar] = useState<Cliente | null>(null);
   const [formCliente, setFormCliente] = useState<CreateClienteDto>({ nombre: "", telefono: "", email: "", direccion: "" });
   const [isSubmittingCliente, setIsSubmittingCliente] = useState(false);
+  const [mostrarHistorialCompleto, setMostrarHistorialCompleto] = useState(false);
 
   const getTodayString = () => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}-${String(h.getDate()).padStart(2,'0')}`; };
 
@@ -130,7 +131,23 @@ const CuentasCorrientes: React.FC = () => {
                 <Tabs.Tab eventKey="deudas" title={<><Wallet size={16} className="mr-1 inline" /> Deudas Pendientes</>}>
                   <div className="mt-3">
                     {Object.keys(ventasPorCliente).length > 0 ? (
-                      Object.keys(ventasPorCliente).map((cliente) => (
+                      Object.keys(ventasPorCliente).map((cliente) => {
+                        // Filtrar ventas según el estado del toggle
+                        const ventasCliente = ventasPorCliente[cliente];
+                        const ventasFiltradas = mostrarHistorialCompleto 
+                          ? ventasCliente 
+                          : ventasCliente.filter(v => {
+                              const isRecibo = v.estado === 'Completada' && (!v.items || v.items.length === 0);
+                              if (isRecibo) return true; // Siempre mostrar los recibos de pago
+                              const total = Number(v.total);
+                              const pagado = Number(v.monto_pagado || 0);
+                              return (total - pagado) > 0; // Solo mostrar deudas con saldo pendiente
+                            });
+                        
+                        // Si no hay ventas filtradas para mostrar, no renderizar la card del cliente
+                        if (ventasFiltradas.length === 0) return null;
+
+                        return (
                         <div key={cliente} className={`${S.card} mb-4`}>
                           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 px-5 py-3 bg-slate-50 border-b border-slate-200 rounded-t-xl">
                             <div className="flex items-center gap-2">
@@ -139,6 +156,12 @@ const CuentasCorrientes: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-3">
                               <span className={`${S.badgeDanger} text-sm px-3 py-1`}>Deuda Total: {formatearMoneda(calcularDeudaCliente(cliente))}</span>
+                              <button 
+                                className="flex items-center gap-1 px-3 py-1.5 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
+                                onClick={() => setMostrarHistorialCompleto(!mostrarHistorialCompleto)}
+                              >
+                                {mostrarHistorialCompleto ? <><EyeOff size={14} /> Ocultar saldadas</> : <><History size={14} /> Ver historial</>}
+                              </button>
                               <button className={S.btnSuccess} onClick={() => handleAbrirModalPago(cliente)}>Registrar Entrega / Pago</button>
                             </div>
                           </div>
@@ -148,7 +171,7 @@ const CuentasCorrientes: React.FC = () => {
                                 <tr><th className={S.th}>Fecha y Hora</th><th className={S.th}>Medio de Pago</th><th className={S.th}>Detalle</th><th className={`${S.th} text-right`}>Monto/Estado</th></tr>
                               </thead>
                               <tbody>
-                                {ventasPorCliente[cliente].map((venta) => {
+                                {ventasFiltradas.map((venta) => {
                                   const total = Number(venta.total); const pagado = Number(venta.monto_pagado || 0); const resta = total - pagado;
                                   const isRecibo = venta.estado === 'Completada' && (!venta.items || venta.items.length === 0);
                                   return (
@@ -173,7 +196,8 @@ const CuentasCorrientes: React.FC = () => {
                             </table>
                           </div>
                         </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <div className={`${S.alertInfo} text-center`}>✅ No hay deudas pendientes</div>
                     )}

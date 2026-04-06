@@ -258,24 +258,30 @@ const VentasList: React.FC = () => {
     if (isLoading || (ventas.length === 0 && retiros.length === 0)) return;
     const doc = new jsPDF(); const margin = 14;
 
+    // Separar ventas normales de pagos de cuenta corriente
+    const ventasNormales = ventas.filter(v => v.items && v.items.length > 0);
+    const pagosCuentaCorriente = ventas.filter(v => !v.items || v.items.length === 0);
+
+    // Header
     doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, doc.internal.pageSize.width, 35, 'F');
+    doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22); doc.setFont("helvetica", "bold");
-    doc.text("Dietética San José", margin, 20);
+    doc.text("Movimientos del día", margin, 18);
 
     doc.setFontSize(10); doc.setFont("helvetica", "normal");
-    doc.text("Reporte: Movimientos del Día (Auditoría Detallada)", margin, 28);
+    const subtitulo = `Emisión: ${formatearFecha(new Date())} ${formatearHora(new Date())}`;
+    doc.text(subtitulo, margin, 28);
 
-    const rightText = `Emisión: ${formatearFecha(new Date())} ${formatearHora(new Date())}`;
-    doc.text(rightText, doc.internal.pageSize.width - margin - doc.getTextWidth(rightText), 20);
-
-    let currentY = 45;
+    let currentY = 50;
     doc.setTextColor(50, 50, 50);
 
+    let seccionNumero = 1;
+
+    // Sección 1: Retiros de Caja
     if (retiros.length > 0) {
       doc.setFontSize(14); doc.setFont("helvetica", "bold");
-      doc.text("1. Detalle de Retiros de Caja", margin, currentY);
+      doc.text(`${seccionNumero}. Detalle de Retiros de Caja`, margin, currentY);
       autoTable(doc, {
         startY: currentY + 4,
         head: [['Hora', 'Motivo', 'Monto']],
@@ -286,25 +292,62 @@ const VentasList: React.FC = () => {
         margin: { left: margin, right: margin }
       });
       currentY = (doc as any).lastAutoTable.finalY + 12;
+      seccionNumero++;
     }
 
-    if (ventas.length > 0) {
+    // Sección 2: Ventas Normales
+    if (ventasNormales.length > 0) {
       doc.setFontSize(14); doc.setFont("helvetica", "bold");
-      doc.text(`${retiros.length > 0 ? '2.' : '1.'} Detalle Transaccional de Ventas`, margin, currentY);
+      doc.text(`${seccionNumero}. Detalle de Ventas`, margin, currentY);
       autoTable(doc, {
         startY: currentY + 4,
         head: [['Hora', 'N° Venta', 'Cliente', 'Forma Pago', 'Artículos', 'Total']],
-        body: ventas.flatMap((v) => {
+        body: ventasNormales.flatMap((v) => {
           const total = formatearMoneda(Number(v.total));
-          const itemsTxt = (v.items || []).map(i => `${i.articulo?.esPesable ? formatearPeso(Number(i.cantidad)) : i.cantidad}x ${i.articulo?.nombre || 'Art'}`).join(", ");
+          const items = (v.items || []).map(i => `${i.articulo?.esPesable ? formatearPeso(Number(i.cantidad)) : i.cantidad}x ${i.articulo?.nombre || 'Art'}`);
+          const itemsTxt = items.length > 1 ? items.map(item => `• ${item}`).join('\n') : (items[0] || '-');
           return [[
             formatearHora(v.fechaHora),
             v.numeroVenta?.toString() || v.id.toString(),
             getNombreCliente(v),
             formatearFormaPago(v.formaPago, v.estado),
-            itemsTxt.length > 45 ? itemsTxt.substring(0, 45) + '...' : (itemsTxt || '-'),
+            itemsTxt,
             total
           ]];
+        }),
+        theme: 'grid',
+        headStyles: { fillColor: [51, 65, 85], halign: 'left', fontSize: 9 },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: { 5: { halign: 'right', fontStyle: 'bold' } },
+        margin: { left: margin, right: margin }
+      });
+      currentY = (doc as any).lastAutoTable.finalY + 12;
+      seccionNumero++;
+    }
+
+    // Sección 3: Cobro de Deuda
+    if (pagosCuentaCorriente.length > 0) {
+      doc.setFontSize(14); doc.setFont("helvetica", "bold");
+      doc.text(`${seccionNumero}. Cobro de Deuda`, margin, currentY);
+      autoTable(doc, {
+        startY: currentY + 4,
+        head: [['Hora', 'N° Venta', 'Cliente', 'Forma Pago', 'Tipo', 'Monto']],
+        body: pagosCuentaCorriente.map((v) => {
+          // Determinar si es pago parcial o total
+          // Si monto_pagado < total, es parcial; si monto_pagado == total, es total
+          const montoPagado = Number(v.monto_pagado || 0);
+          const totalVenta = Number(v.total || 0);
+          const esPagoTotal = montoPagado >= totalVenta;
+          const tipoPago = esPagoTotal ? 'Total' : 'Parcial';
+          
+          return [
+            formatearHora(v.fechaHora),
+            v.numeroVenta?.toString() || v.id.toString(),
+            getNombreCliente(v),
+            formatearFormaPago(v.formaPago, v.estado),
+            tipoPago,
+            formatearMoneda(Number(v.total))
+          ];
         }),
         theme: 'grid',
         headStyles: { fillColor: [51, 65, 85], halign: 'left', fontSize: 9 },
@@ -321,7 +364,7 @@ const VentasList: React.FC = () => {
       doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
     }
 
-    doc.save(`Auditoria_Transaccional_${fechaSeleccionada}.pdf`);
+    doc.save(`MovimientosDelDia_${fechaSeleccionada}.pdf`);
   };
 
   return (
